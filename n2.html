@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gym Workout and Diet Personalization</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>Select Your Details</h1>
+  <div id="details">
+    <h2>Height (cm)</h2>
+    <input type="number" id="height" placeholder="Enter your height">
+
+    <h2>Weight (kg)</h2>
+    <input type="number" id="weight" placeholder="Enter your weight">
+
+    <h2>Age</h2>
+    <input type="number" id="age" placeholder="Enter your age">
+
+    <h2>Gender</h2>
+    <select id="gender">
+      <option value="male">Male</option>
+      <option value="female">Female</option>
+    </select>
+
+    <h2>Activity Level</h2>
+    <select id="activity">
+      <option value="sedentary">Sedentary</option>
+      <option value="light">Lightly Active</option>
+      <option value="moderate">Moderately Active</option>
+      <option value="active">Very Active</option>
+      <option value="extra">Extra Active</option>
+    </select>
+  </div>
+
+  <h1>Select Your Preferences</h1>
+  <div id="preferences">                            
+    <h2>Exercise Type</h2>
+    <button onclick="selectPreference('exercise', 'Aerobic')">Aerobic</button>
+    <button onclick="selectPreference('exercise', 'Resistance')">Resistance</button>
+    <button onclick="selectPreference('exercise', 'Flexibility')">Flexibility</button>
+    <button onclick="selectPreference('exercise', 'Stability')">Stability</button>
+    
+    <h2>Dietary Goal</h2>
+    <button onclick="selectPreference('diet', 'Calorie_deficit')">Calorie Deficit</button>
+    <button onclick="selectPreference('diet', 'Calorie_surplus')">Calorie Surplus</button>
+    <button onclick="selectPreference('diet', 'Calorie_maintenance')">Maintenance</button>
+  </div>
+  
+  <h2>Your Personalized Plan</h2>
+  <div id="recommendation">
+    <h3>Workout Plan</h3>
+    <p id="exercise-plan">Select an exercise type above.</p>
+    
+    <h3>Dietary Plan</h3>
+    <p id="diet-plan">Select a dietary goal above.</p>
+  </div>
+  
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Your Foods</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <h1>Diet and Food Database</h1>
+
+    <!-- Calorie Goal Form -->
+    <h2>Set Your Calorie Goal</h2>
+    <form id="calorie-goal-form">
+        <label for="calorie-goal">Calorie Goal:</label>
+        <input type="number" id="calorie-goal" required>
+        <button type="submit">Set Goal</button>
+    </form>
+
+    <h1>Select Your Foods</h1>
+    <p>Calorie Goal: <span id="calorie-goal-display"></span></p>
+    <p>Total Calories Consumed: <span id="total-calories">0</span></p>
+    
+    <h2>Chicken</h2>
+    <ul>
+        <li>
+            <strong>Chicken Breast</strong> - 165 calories per 100g
+            <button onclick="addFood('Chicken Breast', 165)">Add</button>
+            <button onclick="removeFood('Chicken Breast', 165)">Remove</button>
+        </li>
+        <li>
+            <strong>Chicken Wings</strong> - 203 calories per 100g
+            <button onclick="addFood('Chicken Wings', 203)">Add</button>
+            <button onclick="removeFood('Chicken Wings', 203)">Remove</button>
+        </li>
+        <li>
+            <strong>Drumsticks</strong> - 175 calories per 100g
+            <button onclick="addFood('Drumsticks', 175)">Add</button>
+            <button onclick="removeFood('Drumsticks', 175)">Remove</button>
+        </li>
+    </ul>
+
+    <h2>Fish</h2>
+    <ul>
+        <li>
+            <strong>Salmon</strong> - 206 calories per 100g
+            <button onclick="addFood('Salmon', 206)">Add</button>
+            <button onclick="removeFood('Salmon', 206)">Remove</button>
+        </li>
+        <li>
+            <strong>Tuna</strong> - 132 calories per 100g
+            <button onclick="addFood('Tuna', 132)">Add</button>
+            <button onclick="removeFood('Tuna', 132)">Remove</button>
+        </li>
+        <li>
+            <strong>Shrimp</strong> - 99 calories per 100g
+            <button onclick="addFood('Shrimp', 99)">Add</button>
+            <button onclick="removeFood('Shrimp', 99)">Remove</button>
+        </li>
+    </ul>
+
+    <h2>Rice</h2>
+    <ul>
+        <li>
+            <strong>White Rice</strong> - 130 calories per 100g
+            <button onclick="addFood('White Rice', 130)">Add</button>
+            <button onclick="removeFood('White Rice', 130)">Remove</button>
+        </li>
+        <li>
+            <strong>Brown Rice</strong> - 112 calories per 100g
+            <button onclick="addFood('Brown Rice', 112)">Add</button>
+            <button onclick="removeFood('Brown Rice', 112)">Remove</button>
+        </li>
+        <li>
+            <strong>Basmati Rice</strong> - 121 calories per 100g
+            <button onclick="addFood('Basmati Rice', 121)">Add</button>
+            <button onclick="removeFood('Basmati Rice', 121)">Remove</button>
+        </li>
+        <li>
+            <strong>Other Rice</strong> - 120 calories per 100g
+            <button onclick="addFood('Other Rice', 120)">Add</button>
+            <button onclick="removeFood('Other Rice', 120)">Remove</button>
+        </li>
+    </ul>
+
+    <h2>Beans</h2>
+    <ul>
+        <li>
+            <strong>Beans</strong> - 347 calories per 100g
+            <button onclick="addFood('Beans', 347)">Add</button>
+            <button onclick="removeFood('Beans', 347)">Remove</button>
+        </li>
+    </ul>
+
+    <h2>Turkey</h2>
+    <ul>
+        <li>
+            <strong>Turkey</strong> - 135 calories per 100g
+            <button onclick="addFood('Turkey', 135)">Add</button>
+            <button onclick="removeFood('Turkey', 135)">Remove</button>
+        </li>
+    </ul>
+
+    <h2>Beef</h2>
+    <ul>
+        <li>
+            <strong>Beef</strong> - 250 calories per 100g
+            <button onclick="addFood('Beef', 250)">Add</button>
+            <button onclick="removeFood('Beef', 250)">Remove</button>
+        </li>
+    </ul>
+
+    <h2>Potatoes</h2>
+    <ul>
+        <li>
+            <strong>Fries</strong> - 312 calories per 100g
+            <button onclick="addFood('Fries', 312)">Add</button>
+            <button onclick="removeFood('Fries', 312)">Remove</button>
+        </li>
+        <li>
+            <strong>Boiled Potatoes</strong> - 87 calories per 100g
+            <button onclick="addFood('Boiled Potatoes', 87)">Add</button>
+            <button onclick="removeFood('Boiled Potatoes', 87)">Remove</button>
+        </li>
+    </ul>
+
+    <h2>Eggs</h2>
+    <ul>
+        <li>
+            <strong>Eggs</strong> - 155 calories per 100g
+            <button onclick="addFood('Eggs', 155)">Add</button>
+            <button onclick="removeFood('Eggs', 155)">Remove</button>
+        </li>
+    </ul>
+
+    <h2>Fruits and Veggies</h2>
+    <ul>
+        <li>
+            <strong>Fruits</strong> - 52 calories per 100g
+            <button onclick="addFood('Fruits', 52)">Add</button>
+            <button onclick="removeFood('Fruits', 52)">Remove</button>
+        </li>
+        <li>
+            <strong>Veggies</strong> - 25 calories per 100g
+            <button onclick="addFood('Veggies', 25)">Add</button>
+            <button onclick="removeFood('Veggies', 25)">Remove</button>
+        </li>
+    </ul>
+
+    <h2>Oats and Other Cereals</h2>
+    <ul>
+        <li>
+            <strong>Oats</strong> - 389 calories per 100g
+            <button onclick="addFood('Oats', 389)">Add</button>
+            <button onclick="removeFood('Oats', 389)">Remove</button>
+        </li>
+        <li>
+            <strong>Other Cereals</strong> - 375 calories per 100g
+            <button onclick="addFood('Other Cereals', 375)">Add</button>
+            <button onclick="removeFood('Other Cereals', 375)">Remove</button>
+        </li>
+    </ul>
+
+    <h2>Milk</h2>
+    <ul>
+        <li>
+            <strong>Dairy Milk</strong> - 42 calories per 100g
+            <button onclick="addFood('Dairy Milk', 42)">Add</button>
+            <button onclick="removeFood('Dairy Milk', 42)">Remove</button>
+        </li>
+        <li>
+            <strong>Almond Milk</strong> - 17 calories per 100g
+            <button onclick="addFood('Almond Milk', 17)">Add</button>
+            <button onclick="removeFood('Almond Milk', 17)">Remove</button>
+        </li>
+        <li>
+            <strong>Other Milk</strong> - 50 calories per 100g
+            <button onclick="addFood('Other Milk', 50)">Add</button>
+            <button onclick="removeFood('Other Milk', 50)">Remove</button>
+        </li>
+    </ul>
+    <h2>Custom Food</h2>
+    <form id="custom-food-form">
+        <label for="custom-food-name">Food Name:</label>
+        <input type="text" id="custom-food-name" required>
+        <label for="custom-food-calories">Calories per Serving:</label>
+        <input type="number" id="custom-food-calories" required>
+        <button type="button" id="add-custom-food">Add Custom Food</button>
+        <button type="button" id="remove-custom-food">Remove Custom Food</button>
+    </form>
+
+    <h2>Summary</h2>
+    <div id="cart">
+        <ul id="cart-items"></ul>
+    </div>
+    <p>Your total calorie intake: <span id="summary-calories">0</span></p>
+    <p id="status-message"></p>
+
+    <button onclick="resetTracker()">Reset Tracker</button>
+    <script src="script.js"></script>
+
+    
+</body>
+</html>
