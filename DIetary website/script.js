@@ -557,9 +557,33 @@ function renderSearchResults() {
   const q = searchBox.value.trim().toLowerCase();
   resultsList.innerHTML = '';
   if (q.length < 2) return;
+
+  // Rank matches so the most likely food comes first:
+  //   0 = name starts with the query      ("milk" -> "Milk, whole")
+  //   1 = a word in the name starts with it ("Chocolate milk")
+  //   2 = query appears anywhere          ("Egg casserole with ... milk ...")
+  // Ties: shorter names first, since they're usually the plain food.
+  const rank = name => {
+    if (name.startsWith(q)) return 0;
+    if (name.includes(' ' + q) || name.includes(',' + q) || name.includes('(' + q)) return 1;
+    return 2;
+  };
+
+  // The USDA download stores some foods twice (found under two keywords),
+  // so skip any name already shown. A Set makes each check O(1).
+  const seen = new Set();
+
   combinedFoods
-    .filter(f => f.name.toLowerCase().includes(q))
+    .map(f => ({ food: f, name: f.name.toLowerCase() }))
+    .filter(x => x.name.includes(q))
+    .sort((a, b) => rank(a.name) - rank(b.name) || a.name.length - b.name.length)
+    .filter(x => {
+      if (seen.has(x.name)) return false;
+      seen.add(x.name);
+      return true;
+    })
     .slice(0, 10)
+    .map(x => x.food)
     .forEach(food => {
       const li = document.createElement('li');
 

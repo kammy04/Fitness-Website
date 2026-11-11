@@ -26,7 +26,7 @@ This project bridges that gap by providing a one-stop fitness hub that:
 - **Aerobic**, **Resistance**, **Flexibility** and **Stability** pages with calories burned per hour, step-by-step form instructions, and recommended reps/sets.
 
 ### 3. Food Search & Macro Tracker (`DIetary website/FoodDB.html`)
-- Search a food database built from the **USDA FoodData Central** API (calories, protein, carbs and fat per 100 g).
+- Search a food database built from the **USDA FoodData Central** API (calories, protein, carbs and fat per 100 g). Results are ranked so names that start with your search come first, with duplicates removed.
 - **Favourites & recent foods:** star a food to pin it, and the last 8 foods you opened appear as one-click chips under the search box.
 - Choose an amount in grams (defaults to 100 g) or a serving such as "1 cup"; calculate macros or add the food to today's log.
 - Daily goals for calories, protein, carbs and fat based on your weight, TDEE and dietary goal, with an over/under status line.
