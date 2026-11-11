@@ -80,6 +80,21 @@ The site is static, so it deploys as-is. `index.html` forwards the site root to 
 
 ---
 
+## Next Steps
+
+1. **Publish the site** on Vercel (steps under *Deploying* above) so it has a public link.
+2. **Make the food diary easier to find.** Logs are already saved per day in the browser (`localStorage` key `dailyLogs`) and shown in the **Past Days** section of the food page, but nothing points users there. Possible additions: a "History" link at the top, a calendar or weekly view, and charts of calories and macros over time.
+3. **Restructure the layout** so every feature is easy to discover: a navigation bar shared by all pages, a clear order on the food page (search → today → goals → meals → history), and a layout that works on phones.
+4. **Choose a better food data source.** Options to compare:
+   - *USDA FoodData Central (current):* free and authoritative, but we only pull the "Survey (FNDDS)" data type, one food at a time. Using the free bulk CSV downloads and adding the **Foundation** and **SR Legacy** data types would give more foods (e.g. plain "oats") and real portion sizes.
+   - *Open Food Facts:* free and open, strong on **branded and packaged foods** with barcodes; data quality varies because it's crowd-sourced.
+   - *Commercial APIs (e.g. Nutritionix, Edamam):* natural-language search ("2 eggs and toast") and large branded databases, but they need an account, and free tiers are limited.
+5. **Track micronutrients against recommended daily levels.** The USDA data already includes fibre, sodium, sugar, vitamins and minerals; `foods.py` currently keeps only calories, protein, carbs and fat. Compare intake with the Dietary Reference Intakes (RDA/AI), which vary by age and sex.
+6. **Refine the macro targets.** Currently: protein 0.8 g per lb of body weight, fat 25% of calories, carbs fill the remaining calories. To add: let users pick fat within the usual 20–35% of calories, and a **fibre** target of about 14 g per 1,000 kcal.
+7. **User accounts with a real database.** Move data from `localStorage` to a backend (e.g. Firebase, Supabase, or a small server with PostgreSQL) so data follows the user across devices and the "Top 5" idea becomes possible.
+
+---
+
 ## Solution Specification
 
 ### Technologies Used:
