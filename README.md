@@ -20,7 +20,7 @@ This project bridges that gap by providing a one-stop fitness hub that:
 ### 1. Personalized Plan (main page — `n2.html`)
 - Enter height (cm or ft/in), weight (kg or lbs), age, gender and activity level; inputs are remembered between visits.
 - Calorie targets for **deficit**, **maintenance** and **surplus**, calculated with the Mifflin-St Jeor BMR equation × an activity factor.
-- Pick an exercise type to get a link to its guide page.
+- Pick an exercise type to get a link to its guide page, plus a **suggested number of training days per week** for your activity level (updates when you change it).
 
 ### 2. Exercise Guides
 - **Aerobic**, **Resistance**, **Flexibility** and **Stability** pages with calories burned per hour, step-by-step form instructions, and recommended reps/sets.

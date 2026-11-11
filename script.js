@@ -103,11 +103,38 @@ function updatePlan() {
   return dietPlans;
 }
 
+// Suggested training days per week for each activity level.
+// More active people can recover from (and need) more sessions; everyone
+// keeps at least one rest day.
+const trainingDaysByActivity = {
+  sedentary: "2–3 training days a week (start with short sessions and build up)",
+  light:     "3 training days a week",
+  moderate:  "3–4 training days a week",
+  active:    "4–5 training days a week",
+  extra:     "5–6 training days a week, keeping at least 1 full rest day",
+};
+
+let selectedExercise = null;
+
+function updateTrainingDays() {
+  const el = document.getElementById("training-days");
+  if (!selectedExercise) { el.hidden = true; return; }
+  const select = document.getElementById("activity");
+  const levelName = select.options[select.selectedIndex].text;
+  el.textContent = `📅 Suggested for ${levelName}: ${trainingDaysByActivity[select.value]}.`;
+  el.hidden = false;
+}
+
+// Re-suggest straight away if the activity level changes.
+document.getElementById("activity").addEventListener("change", updateTrainingDays);
+
 // Function to handle preference selection and update the plan
 function selectPreference(type, preference) {
   if (type === "exercise") {
     document.getElementById("exercise-plan").innerHTML =
       workoutPlans[preference];
+    selectedExercise = preference;
+    updateTrainingDays();
   } else if (type === "diet") {
     const dietPlans = updatePlan();
     if (dietPlans) {
