@@ -1,27 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Gym Workout and Diet Personalization</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <header id="hero">
+    <h1>Welcome to <span class="brand">Kami’s Fitness Planner</span> 💪</h1>
+    <p>Your personalized hub for building workouts and tracking calories — based on your goals, your lifestyle, and your preferences.</p>
+    <p><strong>How it works:</strong></p>
+    <ul>
+      <li>👇 Start by entering your height, weight, age, gender, and activity level.</li>
+      <li>🏋️ Choose your preferred workout style (e.g., Resistance, Aerobic, etc.).</li>
+      <li>🔗 You’ll get a personalized plan with links to learn more about each type.</li>
+      <li>🍽️ Choose your calorie goal — deficit, maintenance, or surplus. Then click on the link and start tracking!</li>
+    </ul>
+  </header>
+  
   <h1>Select Your Details</h1>
   <div id="details">
-    <h2>Height (cm)</h2>
-    <input type="number" id="height" placeholder="Enter your height">
+    <h2>Height</h2>
+    <select id="height-unit">
+      <option value="cm">Centimeters (cm)</option>
+      <option value="ftin">Feet + Inches</option>
+    </select>
+    <input type="number" id="height" placeholder="Height in cm">
 
-    <h2>Weight (kg)</h2>
+    <div id="height-ftin-fields" style="display: none;">
+      <input type="number" id="height-feet" placeholder="Feet">
+      <input type="number" id="height-inches" placeholder="Inches">
+    </div>
+
+    <h2>Weight</h2>
+    <select id="weight-unit">
+      <option value="kg">Kilograms (kg)</option>
+      <option value="lbs">Pounds (lbs)</option>
+    </select>
     <input type="number" id="weight" placeholder="Enter your weight">
 
+  
     <h2>Age</h2>
     <input type="number" id="age" placeholder="Enter your age">
-
+  
     <h2>Gender</h2>
     <select id="gender">
       <option value="male">Male</option>
       <option value="female">Female</option>
     </select>
-
+  
     <h2>Activity Level</h2>
     <select id="activity">
       <option value="sedentary">Sedentary</option>
@@ -30,7 +57,11 @@
       <option value="active">Very Active</option>
       <option value="extra">Extra Active</option>
     </select>
+
+    <button onclick="resetInputs()">Reset All</button>
+
   </div>
+  
 
   <h1>Select Your Preferences</h1>
   <div id="preferences">                            
@@ -57,4 +88,7 @@
   
   <script src="script.js"></script>
 </body>
+
+
 </html>
+
