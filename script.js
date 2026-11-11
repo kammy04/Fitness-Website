@@ -160,3 +160,15 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+// Stop the mouse wheel / trackpad from changing number inputs.
+// Browsers change a focused <input type="number"> when you scroll over it,
+// so un-focus it instead and let the scroll move the page as normal.
+// One listener on the document covers every number box on the page
+// (including ones added later), because wheel events bubble up.
+document.addEventListener("wheel", (event) => {
+  const el = event.target;
+  if (el instanceof HTMLInputElement && el.type === "number" && el === document.activeElement) {
+    el.blur();
+  }
+}, { passive: true });
