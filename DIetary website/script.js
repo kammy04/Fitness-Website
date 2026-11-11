@@ -1,6 +1,9 @@
 // script.js — goals + tracker + cart toggle/removal + custom foods (add/edit/delete)
 
 // ========== Storage-backed state ==========
+const GRAM_LABEL    = 'g';   // label of the "grams" option in the unit dropdown
+const DEFAULT_GRAMS = 100;   // starting amount when a food is selected
+
 let customFoods   = JSON.parse(localStorage.getItem('customFoods') || '[]');
 migrateCustomFoods(); // ensure ids & source
 let combinedFoods = (typeof foods !== 'undefined' ? foods : []).concat(customFoods);
@@ -172,7 +175,7 @@ function updateCartHistoryUI() {
   cartHistory.forEach((entry, i) => {
     const li = document.createElement('li');
     li.textContent =
-      `${entry.name} — ${entry.amount} ${entry.unit}: ` +
+      `${entry.name} — ${formatQuantity(entry.amount, entry.unit)}: ` +
       `${entry.macros.calories.toFixed(1)} kcal, ` +
       `${entry.macros.protein.toFixed(1)}g P, ` +
       `${entry.macros.carbs.toFixed(1)}g C, ` +
@@ -296,7 +299,7 @@ function showDetails(food) {
   unitSelect.innerHTML = '';
   const baseOpt = document.createElement('option');
   baseOpt.value = 1;
-  baseOpt.textContent = '1 g (per gram)';
+  baseOpt.textContent = GRAM_LABEL;
   unitSelect.appendChild(baseOpt);
 
   const servings = food.servings || {};
@@ -309,9 +312,23 @@ function showDetails(food) {
     }
   }
 
-  amountInput.value = 1;
+  // Start at 100 g: the food data is per 100 g, like a nutrition label.
+  amountInput.value = DEFAULT_GRAMS;
   calcDisplay.innerHTML = '';
   detailsCard.style.display = 'block';
+}
+
+// Switching unit resets the amount to a sensible starting value:
+// 100 for grams, 1 for a serving like "1 cup" (otherwise 100 g -> 100 cups).
+unitSelect.addEventListener('change', () => {
+  amountInput.value = unitSelect.value === '1' ? DEFAULT_GRAMS : 1;
+});
+
+// "100 g" for grams, "2 × 1 cup" for other servings.
+// Older cart entries saved the gram unit as '1 g (per gram)', so accept both.
+function formatQuantity(amount, unit) {
+  const isGrams = unit === GRAM_LABEL || unit === '1 g (per gram)';
+  return isGrams ? `${amount} g` : `${amount} × ${unit}`;
 }
 
 function calculateMacrosForSelected() {

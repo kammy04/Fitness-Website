@@ -49,6 +49,14 @@ button:hover {
   transform: scale(1.03);
 }
 
+/* ✕ button next to each cart entry: keep it small and off the text */
+.remove-btn {
+  margin: 0 0 0 10px;
+  padding: 2px 9px;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
 /* Item-count bubble on the "Show Cart" button */
 .cart-badge {
   display: inline-block;
