@@ -48,6 +48,8 @@ const trackerFatEl  = document.getElementById('tracker-fat');
 
 
 const toggleCartBtn     = document.getElementById('toggle-cart-btn');
+const cartBtnLabel      = document.getElementById('cart-btn-label');
+const cartCountBadge    = document.getElementById('cart-count');
 const cartHistorySection= document.getElementById('cart-history');
 const cartHistoryList   = document.getElementById('cart-history-list');
 const resetBtn          = document.getElementById('reset-cart');
@@ -184,6 +186,11 @@ function updateCartHistoryUI() {
 
     cartHistoryList.appendChild(li);
   });
+
+  // Item-count badge on the cart button. Every cart change (add, remove,
+  // reset, page load) calls this function, so the badge always matches.
+  cartCountBadge.textContent = cartHistory.length;
+  cartCountBadge.hidden = cartHistory.length === 0;
 }
 
 // ========== Goals actions ==========
@@ -213,7 +220,8 @@ saveGoalsBtn.addEventListener('click', () => {
 toggleCartBtn.addEventListener('click', () => {
   const isHidden = getComputedStyle(cartHistorySection).display === 'none';
   cartHistorySection.style.setProperty('display', isHidden ? 'block' : 'none', 'important');
-  toggleCartBtn.textContent = isHidden ? 'Hide Cart ✕' : 'Show Cart 🛒';
+  // Change only the label; setting the whole button's text would wipe out the badge.
+  cartBtnLabel.textContent = isHidden ? 'Hide Cart ✕' : 'Show Cart 🛒';
 });
 
 function removeCartItem(index) {

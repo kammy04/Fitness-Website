@@ -49,6 +49,27 @@ button:hover {
   transform: scale(1.03);
 }
 
+/* Item-count bubble on the "Show Cart" button */
+.cart-badge {
+  display: inline-block;
+  min-width: 22px;
+  padding: 2px 7px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background-color: #ff3b30;
+  color: white;
+  font-size: 13px;
+  font-weight: bold;
+  line-height: 18px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* display:inline-block above would override the HTML hidden attribute */
+.cart-badge[hidden] {
+  display: none;
+}
+
 #recommendation {
   border-top: none;
   padding-top: 20px;

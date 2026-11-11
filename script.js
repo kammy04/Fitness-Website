@@ -1,4 +1,4 @@
-// Basal Metabolic Rate (BMR) calculation based on the Harris-Benedict equation
+// Basal Metabolic Rate (BMR) calculation based on the Mifflin-St Jeor equation
 function calculateBMR(weight, height, age, gender) {
   if (gender === "male") {
     return 10 * weight + 6.25 * height - 5 * age + 5;
