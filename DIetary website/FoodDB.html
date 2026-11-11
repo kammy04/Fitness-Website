@@ -95,9 +95,16 @@
 
   <!-- Cart History & Reset (initially hidden) -->
   <section id="cart-history" style="display: none;">
-    <h3>Cart History</h3>
+    <h3>Today's Cart</h3>
     <ul id="cart-history-list"></ul>
-    <button id="reset-cart" type="button">Reset Cart</button>
+    <button id="reset-cart" type="button">Reset Today's Cart</button>
+  </section>
+
+  <!-- Past days (kept in localStorage, newest first) -->
+  <section id="history-section">
+    <h3>Past Days 📅</h3>
+    <p id="history-empty" class="muted">Nothing yet. Each day's log shows up here the next day.</p>
+    <div id="history-list"></div>
   </section>
 
   <!-- Custom Food Form -->

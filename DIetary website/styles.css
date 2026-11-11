@@ -49,6 +49,26 @@ button:hover {
   transform: scale(1.03);
 }
 
+/* Past days list */
+#history-list details {
+  background: #fff;
+  border: 1px solid #e3e8ef;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+#history-list summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+#history-list ul {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+.muted[hidden] {
+  display: none;
+}
+
 /* ✕ button next to each cart entry: keep it small and off the text */
 .remove-btn {
   margin: 0 0 0 10px;

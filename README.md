@@ -17,19 +17,51 @@ This project bridges that gap by providing a one-stop fitness hub that:
 
 ## Website Features
 
-### 1. **Exercise Categories**
-   - **Aerobic Exercises**: Highlights exercises to improve cardiovascular health.
-   - **Flexibility Training**: Provides routines to enhance range of motion and prevent injuries.
-   - **Resistance Training**: Focuses on strength-building workouts.
-   - **Stability Training**: Improves balance and core strength.
+### 1. Personalized Plan (main page — `n2.html`)
+- Enter height (cm or ft/in), weight (kg or lbs), age, gender and activity level; inputs are remembered between visits.
+- Calorie targets for **deficit**, **maintenance** and **surplus**, calculated with the Mifflin-St Jeor BMR equation × an activity factor.
+- Pick an exercise type to get a link to its guide page.
 
-### 2. **Nutritional Insights**
-   - Interactive tools to explore healthy eating habits and recommended foods.
-   - A database that categorizes foods for various health goals.
+### 2. Exercise Guides
+- **Aerobic**, **Resistance**, **Flexibility** and **Stability** pages with calories burned per hour, step-by-step form instructions, and recommended reps/sets.
 
-### 3. **Interactive Design**
-   - The website is designed with HTML, CSS, and JavaScript for a smooth user experience.
-   - Engaging visuals and easy navigation to ensure accessibility for users of all fitness levels.
+### 3. Food Search & Macro Tracker (`DIetary website/FoodDB.html`)
+- Search a food database built from the **USDA FoodData Central** API (calories, protein, carbs and fat per 100 g).
+- Choose an amount in grams (defaults to 100 g) or a serving such as "1 cup"; calculate macros or add the food to today's log.
+- Daily goals for calories, protein, carbs and fat based on your weight, TDEE and dietary goal, with an over/under status line.
+- **Daily log:** each day starts fresh, every entry is timestamped, and past days are kept in a **Past Days** history you can expand.
+- Cart button with an item-count badge; remove single entries or reset today's cart.
+- Add, edit and delete your own **custom foods**.
+
+---
+
+## Running Locally
+
+The site is plain HTML, CSS and JavaScript — no build step. Serve the folder with any static server, for example:
+
+```bash
+cd gym-workout
+python3 -m http.server 8000
+```
+
+Then open <http://localhost:8000/n2.html>. (VS Code's Live Server extension also works.)
+
+### How data is stored
+Everything is saved in the browser's `localStorage`, so it stays on your device and there is no account or server:
+
+| Key | What it holds |
+|---|---|
+| `dailyLogs` | Food entries grouped by date (`"YYYY-MM-DD"`), each with a timestamp |
+| `customFoods` | Foods you added yourself |
+| `userTDEE`, `userWeightLbs`, `goalMode` | Your saved daily-goal settings |
+
+### Updating the food database
+`DIetary website/foods.py` downloads foods from the USDA API into `foods.csv`, and `covert.py` converts that into `foods.js`, which the page loads. The API key is read from an environment variable so it is never committed:
+
+```bash
+export USDA_API_KEY="your-key-here"   # free key from https://fdc.nal.usda.gov/api-key-signup
+python3 foods.py && python3 covert.py
+```
 
 ---
 
@@ -78,7 +110,7 @@ This project bridges that gap by providing a one-stop fitness hub that:
 
 ## References
 
-- Kaggle Datasets for Food Information
+- USDA FoodData Central API for food and nutrient data
 - CSS Tricks and Mozilla Developer Network for Responsive Design Techniques
 - Jupyter Notebook Documentation for backend implementation guidance
 

@@ -8,8 +8,13 @@ let customFoods   = JSON.parse(localStorage.getItem('customFoods') || '[]');
 migrateCustomFoods(); // ensure ids & source
 let combinedFoods = (typeof foods !== 'undefined' ? foods : []).concat(customFoods);
 
-let cartHistory   = JSON.parse(localStorage.getItem('cartHistory')   || '[]');
-let trackerTotals = JSON.parse(localStorage.getItem('trackerTotals') || '{"calories":0,"protein":0,"carbs":0,"fat":0}');
+// Daily log: one list of entries per calendar day, so every day starts fresh
+// but past days are kept for history and streaks.
+//   localStorage 'dailyLogs' = { "2026-11-11": [ {name, amount, unit, macros, time}, ... ], ... }
+// Totals are always worked out from the entries (see totalsFor), so they can
+// never drift out of sync with what's actually in the log.
+let dailyLogs     = JSON.parse(localStorage.getItem('dailyLogs') || '{}');
+migrateOldCart();
 
 let userTDEE      = parseFloat(localStorage.getItem('userTDEE'))      || null;
 let userWeightLbs = parseFloat(localStorage.getItem('userWeightLbs')) || null;
@@ -56,6 +61,8 @@ const cartCountBadge    = document.getElementById('cart-count');
 const cartHistorySection= document.getElementById('cart-history');
 const cartHistoryList   = document.getElementById('cart-history-list');
 const resetBtn          = document.getElementById('reset-cart');
+const historyList       = document.getElementById('history-list');
+const historyEmpty      = document.getElementById('history-empty');
 
 const customForm        = document.getElementById('custom-food-form');
 const cfName            = document.getElementById('cf-name');
@@ -84,8 +91,77 @@ let selectedFood = null;
 // ========== Init ==========
 prefillGoalForm();
 updateGoalsUI();
-updateTrackerUI();
-updateCartHistoryUI();
+refreshLogUI();
+
+// If the page is left open past midnight, show the new day when the user comes back.
+window.addEventListener('focus', refreshLogUI);
+
+// ========== Daily log helpers ==========
+// "YYYY-MM-DD" in the user's LOCAL time zone. (toISOString() would use UTC,
+// which in Ontario flips to tomorrow's date at 7–8 PM.)
+function dateKey(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// Turn "2026-11-11" back into a local Date. (new Date("2026-11-11") would
+// be read as UTC midnight, i.e. the evening before in Ontario.)
+function keyToDate(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d, 12); // noon avoids daylight-saving edge cases
+}
+
+function todayEntries() {
+  return dailyLogs[dateKey()] || [];
+}
+
+function saveLogs() {
+  localStorage.setItem('dailyLogs', JSON.stringify(dailyLogs));
+}
+
+function totalsFor(entries) {
+  return entries.reduce((t, e) => ({
+    calories: t.calories + e.macros.calories,
+    protein:  t.protein  + e.macros.protein,
+    carbs:    t.carbs    + e.macros.carbs,
+    fat:      t.fat      + e.macros.fat
+  }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+}
+
+// Add entries to today's log (newest first) and redraw everything.
+function logEntries(entries) {
+  const key = dateKey();
+  const now = Date.now();
+  const stamped = entries.map(e => ({ ...e, time: now }));
+  dailyLogs[key] = [...stamped, ...(dailyLogs[key] || [])];
+  saveLogs();
+  refreshLogUI();
+}
+
+function formatTime(ms) {
+  return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+// One-time move of the old single cart ('cartHistory' + 'trackerTotals')
+// into today's log, so nothing a user already logged is lost.
+function migrateOldCart() {
+  const old = JSON.parse(localStorage.getItem('cartHistory') || 'null');
+  if (Array.isArray(old) && old.length) {
+    const key = dateKey();
+    dailyLogs[key] = [...(dailyLogs[key] || []), ...old.map(e => ({ ...e, time: e.time || null }))];
+    saveLogs();
+  }
+  localStorage.removeItem('cartHistory');
+  localStorage.removeItem('trackerTotals');
+}
+
+function refreshLogUI() {
+  updateTrackerUI();
+  updateCartHistoryUI();
+  updateHistoryUI();
+}
 
 // ========== Helpers ==========
 function uid() {
@@ -144,7 +220,7 @@ function updateGoalsUI() {
 }
 
 function updateStatusLine() {
-  const diff = trackerTotals.calories - goals.calories;
+  const diff = totalsFor(todayEntries()).calories - goals.calories;
   let msg = '';
   if (goalMode === 'deficit') {
     if (diff <= -50) msg = `Under by ${Math.abs(Math.round(diff))} kcal — nice for a deficit.`;
@@ -163,23 +239,31 @@ function updateStatusLine() {
 }
 
 function updateTrackerUI() {
-  trackerCalEl.textContent  = `Calories: ${trackerTotals.calories.toFixed(1)} / ${goals.calories}`;
-  trackerProtEl.textContent = `Protein: ${trackerTotals.protein.toFixed(1)}g / ${goals.protein}g`;
-  trackerCarbEl.textContent = `Carbs: ${trackerTotals.carbs.toFixed(1)}g / ${goals.carbs}g`;
-  trackerFatEl.textContent  = `Fat: ${trackerTotals.fat.toFixed(1)}g / ${goals.fat}g`;
+  const t = totalsFor(todayEntries());
+  trackerCalEl.textContent  = `Calories: ${t.calories.toFixed(1)} / ${goals.calories}`;
+  trackerProtEl.textContent = `Protein: ${t.protein.toFixed(1)}g / ${goals.protein}g`;
+  trackerCarbEl.textContent = `Carbs: ${t.carbs.toFixed(1)}g / ${goals.carbs}g`;
+  trackerFatEl.textContent  = `Fat: ${t.fat.toFixed(1)}g / ${goals.fat}g`;
   updateStatusLine();
 }
 
+// One line of text for a logged entry, e.g.
+// "7:42 PM · Banana — 100 g: 89.0 kcal, 1.1g P, 22.8g C, 0.3g F"
+function entryText(entry) {
+  const time = entry.time ? `${formatTime(entry.time)} · ` : '';
+  return `${time}${entry.name} — ${formatQuantity(entry.amount, entry.unit)}: ` +
+    `${entry.macros.calories.toFixed(1)} kcal, ` +
+    `${entry.macros.protein.toFixed(1)}g P, ` +
+    `${entry.macros.carbs.toFixed(1)}g C, ` +
+    `${entry.macros.fat.toFixed(1)}g F`;
+}
+
 function updateCartHistoryUI() {
+  const entries = todayEntries();
   cartHistoryList.innerHTML = '';
-  cartHistory.forEach((entry, i) => {
+  entries.forEach((entry, i) => {
     const li = document.createElement('li');
-    li.textContent =
-      `${entry.name} — ${formatQuantity(entry.amount, entry.unit)}: ` +
-      `${entry.macros.calories.toFixed(1)} kcal, ` +
-      `${entry.macros.protein.toFixed(1)}g P, ` +
-      `${entry.macros.carbs.toFixed(1)}g C, ` +
-      `${entry.macros.fat.toFixed(1)}g F`;
+    li.textContent = entryText(entry); // textContent, not innerHTML: food names can be user-typed
 
     const btn = document.createElement('button');
     btn.textContent = '✕';
@@ -192,8 +276,44 @@ function updateCartHistoryUI() {
 
   // Item-count badge on the cart button. Every cart change (add, remove,
   // reset, page load) calls this function, so the badge always matches.
-  cartCountBadge.textContent = cartHistory.length;
-  cartCountBadge.hidden = cartHistory.length === 0;
+  cartCountBadge.textContent = entries.length;
+  cartCountBadge.hidden = entries.length === 0;
+}
+
+// Past days (newest first, up to 7), each expandable to show its entries.
+// Uses <details>/<summary>, which opens and closes without any JavaScript.
+function updateHistoryUI() {
+  const today = dateKey();
+  const pastKeys = Object.keys(dailyLogs)
+    .filter(k => k !== today && dailyLogs[k].length)
+    .sort()                      // "YYYY-MM-DD" strings sort in date order
+    .reverse()
+    .slice(0, 7);
+
+  historyList.innerHTML = '';
+  historyEmpty.hidden = pastKeys.length > 0;
+
+  pastKeys.forEach(key => {
+    const entries = dailyLogs[key];
+    const t = totalsFor(entries);
+    const label = keyToDate(key).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent =
+      `${label} — ${Math.round(t.calories)} kcal · ${Math.round(t.protein)}g P · ` +
+      `${Math.round(t.carbs)}g C · ${Math.round(t.fat)}g F (${entries.length} item${entries.length === 1 ? '' : 's'})`;
+    details.appendChild(summary);
+
+    const ul = document.createElement('ul');
+    entries.forEach(e => {
+      const li = document.createElement('li');
+      li.textContent = entryText(e);
+      ul.appendChild(li);
+    });
+    details.appendChild(ul);
+    historyList.appendChild(details);
+  });
 }
 
 // ========== Goals actions ==========
@@ -216,7 +336,7 @@ saveGoalsBtn.addEventListener('click', () => {
 
   goals = computeGoals(userTDEE, userWeightLbs);
   updateGoalsUI();
-  updateTrackerUI();
+  refreshLogUI();
 });
 
 // ========== Cart toggle & removal ==========
@@ -228,25 +348,18 @@ toggleCartBtn.addEventListener('click', () => {
 });
 
 function removeCartItem(index) {
-  const entry = cartHistory[index];
-  trackerTotals.calories -= entry.macros.calories;
-  trackerTotals.protein  -= entry.macros.protein;
-  trackerTotals.carbs    -= entry.macros.carbs;
-  trackerTotals.fat      -= entry.macros.fat;
-  localStorage.setItem('trackerTotals', JSON.stringify(trackerTotals));
-  cartHistory.splice(index, 1);
-  localStorage.setItem('cartHistory', JSON.stringify(cartHistory));
-  updateTrackerUI();
-  updateCartHistoryUI();
+  const key = dateKey();
+  if (!dailyLogs[key]) return;
+  dailyLogs[key].splice(index, 1);
+  saveLogs();
+  refreshLogUI();
 }
 
+// Clears TODAY only; past days stay in the history.
 resetBtn.addEventListener('click', () => {
-  trackerTotals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
-  localStorage.setItem('trackerTotals', JSON.stringify(trackerTotals));
-  cartHistory = [];
-  localStorage.removeItem('cartHistory');
-  updateTrackerUI();
-  updateCartHistoryUI();
+  delete dailyLogs[dateKey()];
+  saveLogs();
+  refreshLogUI();
 });
 
 // ========== Search & selection ==========
@@ -360,22 +473,12 @@ addBtn.addEventListener('click', () => {
   const m = calculateMacrosForSelected();
   if (!m) return;
 
-  trackerTotals.calories += m.calories;
-  trackerTotals.protein  += m.protein;
-  trackerTotals.carbs    += m.carbs;
-  trackerTotals.fat      += m.fat;
-  localStorage.setItem('trackerTotals', JSON.stringify(trackerTotals));
-  updateTrackerUI();
-
-  const entry = {
+  logEntries([{
     name:   selectedFood.name,
     amount: parseFloat(amountInput.value),
     unit:   unitSelect.options[unitSelect.selectedIndex].textContent,
     macros: m
-  };
-  cartHistory.unshift(entry);
-  localStorage.setItem('cartHistory', JSON.stringify(cartHistory));
-  updateCartHistoryUI();
+  }]);
 });
 
 // ========== Add / Edit / Delete custom foods ==========
