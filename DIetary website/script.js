@@ -21,6 +21,10 @@ const MAX_RECENT  = 8;
 let favorites     = JSON.parse(localStorage.getItem('favorites')   || '[]'); // food keys
 let recentFoods   = JSON.parse(localStorage.getItem('recentFoods') || '[]'); // food keys, newest first
 
+// Saved meals: [{ id, name, items: [{ name, amount, unit, macros }] }]
+// Items are a snapshot, so a meal keeps its numbers even if a food changes later.
+let meals         = JSON.parse(localStorage.getItem('meals') || '[]');
+
 let userTDEE      = parseFloat(localStorage.getItem('userTDEE'))      || null;
 let userWeightLbs = parseFloat(localStorage.getItem('userWeightLbs')) || null;
 let goalMode      = localStorage.getItem('goalMode') || 'maintenance';
@@ -71,6 +75,11 @@ const historyEmpty      = document.getElementById('history-empty');
 const streakEl          = document.getElementById('streak-line');
 const quickPicks        = document.getElementById('quick-picks');
 const favoriteBtn       = document.getElementById('favorite-btn');
+const mealNameInput     = document.getElementById('meal-name');
+const saveMealBtn       = document.getElementById('save-meal-btn');
+const mealMsg           = document.getElementById('meal-msg');
+const mealsList         = document.getElementById('meals-list');
+const mealsEmpty        = document.getElementById('meals-empty');
 
 const customForm        = document.getElementById('custom-food-form');
 const cfName            = document.getElementById('cf-name');
@@ -101,9 +110,11 @@ prefillGoalForm();
 updateGoalsUI();
 refreshLogUI();
 renderQuickPicks();
+renderMeals();
 favoriteBtn.addEventListener('click', () => {
   if (selectedFood) toggleFavorite(selectedFood);
 });
+saveMealBtn.addEventListener('click', saveCartAsMeal);
 
 // If the page is left open past midnight, show the new day when the user comes back.
 window.addEventListener('focus', refreshLogUI);
@@ -283,6 +294,63 @@ function renderQuickPicks() {
     shown++;
   });
   quickPicks.hidden = shown === 0;
+}
+
+// ========== Saved meals ==========
+function saveMeals() {
+  localStorage.setItem('meals', JSON.stringify(meals));
+}
+
+function saveCartAsMeal() {
+  const name = mealNameInput.value.trim();
+  const entries = todayEntries();
+  if (!entries.length) { mealMsg.textContent = "Add some foods to today's cart first."; return; }
+  if (!name)           { mealMsg.textContent = 'Give the meal a name first.'; return; }
+
+  // Copy each entry without its timestamp; it gets a fresh one when logged.
+  const items = entries.map(({ name, amount, unit, macros }) => ({ name, amount, unit, macros }));
+  meals.push({ id: uid(), name, items });
+  saveMeals();
+  mealNameInput.value = '';
+  mealMsg.textContent = `Saved "${name}" (${items.length} item${items.length === 1 ? '' : 's'}).`;
+  renderMeals();
+}
+
+function renderMeals() {
+  mealsList.innerHTML = '';
+  mealsEmpty.hidden = meals.length > 0;
+
+  meals.forEach(meal => {
+    const kcal = Math.round(totalsFor(meal.items).calories);
+    const li = document.createElement('li');
+    li.className = 'meal-item';
+
+    const text = document.createElement('span');
+    text.textContent = `${meal.name} — ${meal.items.length} item${meal.items.length === 1 ? '' : 's'} · ${kcal} kcal`;
+    text.title = meal.items.map(i => `${i.name} (${formatQuantity(i.amount, i.unit)})`).join('\n');
+    li.appendChild(text);
+
+    const logBtn = document.createElement('button');
+    logBtn.type = 'button';
+    logBtn.className = 'meal-log-btn';
+    logBtn.textContent = 'Log meal';
+    logBtn.onclick = () => logEntries(meal.items);
+    li.appendChild(logBtn);
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'remove-btn';
+    delBtn.textContent = '✕';
+    delBtn.title = 'Delete meal';
+    delBtn.onclick = () => {
+      meals = meals.filter(m => m.id !== meal.id);
+      saveMeals();
+      renderMeals();
+    };
+    li.appendChild(delBtn);
+
+    mealsList.appendChild(li);
+  });
 }
 
 // ========== Helpers ==========

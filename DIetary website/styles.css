@@ -90,6 +90,29 @@ button:hover {
   background-color: #fff7e6;
 }
 
+/* Saved meals */
+.meal-save {
+  margin-top: 14px;
+}
+.meal-save input {
+  margin-bottom: 4px;
+}
+.meal-save button {
+  margin: 0 10px 0 0;
+}
+#meals-list {
+  padding-left: 18px;
+}
+.meal-item {
+  margin-bottom: 6px;
+}
+.meal-log-btn {
+  margin: 0 0 0 10px;
+  padding: 3px 12px;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
 /* Daily streak banner */
 .streak {
   display: inline-block;

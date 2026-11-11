@@ -103,6 +103,19 @@
     <h3>Today's Cart</h3>
     <ul id="cart-history-list"></ul>
     <button id="reset-cart" type="button">Reset Today's Cart</button>
+
+    <div class="meal-save">
+      <input type="text" id="meal-name" placeholder="Meal name, e.g. Usual breakfast" maxlength="40" />
+      <button id="save-meal-btn" type="button">Save cart as meal</button>
+      <small id="meal-msg" class="muted"></small>
+    </div>
+  </section>
+
+  <!-- Saved meals: log several foods in one click -->
+  <section id="meals-section">
+    <h3>My Meals 🍽️</h3>
+    <p id="meals-empty" class="muted">No meals yet. Add foods to today's cart, then use "Save cart as meal".</p>
+    <ul id="meals-list"></ul>
   </section>
 
   <!-- Past days (kept in localStorage, newest first) -->
