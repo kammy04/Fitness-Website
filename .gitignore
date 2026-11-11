@@ -1,0 +1,11 @@
+# macOS folder metadata
+.DS_Store
+
+# Unused older export of the food data (site loads foods.js)
+DIetary website/foods.json
+
+# Python cache
+__pycache__/
+
+# Local tool worktrees
+.kilo/
