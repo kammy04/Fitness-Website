@@ -1,4 +1,4 @@
-// Basal Metabolic Rate (BMR) calculation based on the Harris-Benedict equation
+// Basal Metabolic Rate (BMR) calculation based on the Mifflin-St Jeor equation
 function calculateBMR(weight, height, age, gender) {
   if (gender === "male") {
     return 10 * weight + 6.25 * height - 5 * age + 5;
@@ -103,11 +103,38 @@ function updatePlan() {
   return dietPlans;
 }
 
+// Suggested training days per week for each activity level.
+// More active people can recover from (and need) more sessions; everyone
+// keeps at least one rest day.
+const trainingDaysByActivity = {
+  sedentary: "2–3 training days a week (start with short sessions and build up)",
+  light:     "3 training days a week",
+  moderate:  "3–4 training days a week",
+  active:    "4–5 training days a week",
+  extra:     "5–6 training days a week, keeping at least 1 full rest day",
+};
+
+let selectedExercise = null;
+
+function updateTrainingDays() {
+  const el = document.getElementById("training-days");
+  if (!selectedExercise) { el.hidden = true; return; }
+  const select = document.getElementById("activity");
+  const levelName = select.options[select.selectedIndex].text;
+  el.textContent = `📅 Suggested for ${levelName}: ${trainingDaysByActivity[select.value]}.`;
+  el.hidden = false;
+}
+
+// Re-suggest straight away if the activity level changes.
+document.getElementById("activity").addEventListener("change", updateTrainingDays);
+
 // Function to handle preference selection and update the plan
 function selectPreference(type, preference) {
   if (type === "exercise") {
     document.getElementById("exercise-plan").innerHTML =
       workoutPlans[preference];
+    selectedExercise = preference;
+    updateTrainingDays();
   } else if (type === "diet") {
     const dietPlans = updatePlan();
     if (dietPlans) {
@@ -160,3 +187,15 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+// Stop the mouse wheel / trackpad from changing number inputs.
+// Browsers change a focused <input type="number"> when you scroll over it,
+// so un-focus it instead and let the scroll move the page as normal.
+// One listener on the document covers every number box on the page
+// (including ones added later), because wheel events bubble up.
+document.addEventListener("wheel", (event) => {
+  const el = event.target;
+  if (el instanceof HTMLInputElement && el.type === "number" && el === document.activeElement) {
+    el.blur();
+  }
+}, { passive: true });

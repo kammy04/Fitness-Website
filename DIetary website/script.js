@@ -1,12 +1,29 @@
 // script.js — goals + tracker + cart toggle/removal + custom foods (add/edit/delete)
 
 // ========== Storage-backed state ==========
+const GRAM_LABEL    = 'g';   // label of the "grams" option in the unit dropdown
+const DEFAULT_GRAMS = 100;   // starting amount when a food is selected
+
 let customFoods   = JSON.parse(localStorage.getItem('customFoods') || '[]');
 migrateCustomFoods(); // ensure ids & source
 let combinedFoods = (typeof foods !== 'undefined' ? foods : []).concat(customFoods);
 
-let cartHistory   = JSON.parse(localStorage.getItem('cartHistory')   || '[]');
-let trackerTotals = JSON.parse(localStorage.getItem('trackerTotals') || '{"calories":0,"protein":0,"carbs":0,"fat":0}');
+// Daily log: one list of entries per calendar day, so every day starts fresh
+// but past days are kept for history and streaks.
+//   localStorage 'dailyLogs' = { "2026-11-11": [ {name, amount, unit, macros, time}, ... ], ... }
+// Totals are always worked out from the entries (see totalsFor), so they can
+// never drift out of sync with what's actually in the log.
+let dailyLogs     = JSON.parse(localStorage.getItem('dailyLogs') || '{}');
+migrateOldCart();
+
+// Quick picks under the search box: starred foods, and the last few opened.
+const MAX_RECENT  = 8;
+let favorites     = JSON.parse(localStorage.getItem('favorites')   || '[]'); // food keys
+let recentFoods   = JSON.parse(localStorage.getItem('recentFoods') || '[]'); // food keys, newest first
+
+// Saved meals: [{ id, name, items: [{ name, amount, unit, macros }] }]
+// Items are a snapshot, so a meal keeps its numbers even if a food changes later.
+let meals         = JSON.parse(localStorage.getItem('meals') || '[]');
 
 let userTDEE      = parseFloat(localStorage.getItem('userTDEE'))      || null;
 let userWeightLbs = parseFloat(localStorage.getItem('userWeightLbs')) || null;
@@ -48,9 +65,21 @@ const trackerFatEl  = document.getElementById('tracker-fat');
 
 
 const toggleCartBtn     = document.getElementById('toggle-cart-btn');
+const cartBtnLabel      = document.getElementById('cart-btn-label');
+const cartCountBadge    = document.getElementById('cart-count');
 const cartHistorySection= document.getElementById('cart-history');
 const cartHistoryList   = document.getElementById('cart-history-list');
 const resetBtn          = document.getElementById('reset-cart');
+const historyList       = document.getElementById('history-list');
+const historyEmpty      = document.getElementById('history-empty');
+const streakEl          = document.getElementById('streak-line');
+const quickPicks        = document.getElementById('quick-picks');
+const favoriteBtn       = document.getElementById('favorite-btn');
+const mealNameInput     = document.getElementById('meal-name');
+const saveMealBtn       = document.getElementById('save-meal-btn');
+const mealMsg           = document.getElementById('meal-msg');
+const mealsList         = document.getElementById('meals-list');
+const mealsEmpty        = document.getElementById('meals-empty');
 
 const customForm        = document.getElementById('custom-food-form');
 const cfName            = document.getElementById('cf-name');
@@ -79,8 +108,250 @@ let selectedFood = null;
 // ========== Init ==========
 prefillGoalForm();
 updateGoalsUI();
-updateTrackerUI();
-updateCartHistoryUI();
+refreshLogUI();
+renderQuickPicks();
+renderMeals();
+favoriteBtn.addEventListener('click', () => {
+  if (selectedFood) toggleFavorite(selectedFood);
+});
+saveMealBtn.addEventListener('click', saveCartAsMeal);
+
+// If the page is left open past midnight, show the new day when the user comes back.
+window.addEventListener('focus', refreshLogUI);
+
+// ========== Daily log helpers ==========
+// "YYYY-MM-DD" in the user's LOCAL time zone. (toISOString() would use UTC,
+// which in Ontario flips to tomorrow's date at 7–8 PM.)
+function dateKey(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// Turn "2026-11-11" back into a local Date. (new Date("2026-11-11") would
+// be read as UTC midnight, i.e. the evening before in Ontario.)
+function keyToDate(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d, 12); // noon avoids daylight-saving edge cases
+}
+
+function todayEntries() {
+  return dailyLogs[dateKey()] || [];
+}
+
+function saveLogs() {
+  localStorage.setItem('dailyLogs', JSON.stringify(dailyLogs));
+}
+
+function totalsFor(entries) {
+  return entries.reduce((t, e) => ({
+    calories: t.calories + e.macros.calories,
+    protein:  t.protein  + e.macros.protein,
+    carbs:    t.carbs    + e.macros.carbs,
+    fat:      t.fat      + e.macros.fat
+  }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+}
+
+// Add entries to today's log (newest first) and redraw everything.
+function logEntries(entries) {
+  const key = dateKey();
+  const now = Date.now();
+  const stamped = entries.map(e => ({ ...e, time: now }));
+  dailyLogs[key] = [...stamped, ...(dailyLogs[key] || [])];
+  saveLogs();
+  refreshLogUI();
+}
+
+function formatTime(ms) {
+  return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+// One-time move of the old single cart ('cartHistory' + 'trackerTotals')
+// into today's log, so nothing a user already logged is lost.
+function migrateOldCart() {
+  const old = JSON.parse(localStorage.getItem('cartHistory') || 'null');
+  if (Array.isArray(old) && old.length) {
+    const key = dateKey();
+    dailyLogs[key] = [...(dailyLogs[key] || []), ...old.map(e => ({ ...e, time: e.time || null }))];
+    saveLogs();
+  }
+  localStorage.removeItem('cartHistory');
+  localStorage.removeItem('trackerTotals');
+}
+
+function refreshLogUI() {
+  updateTrackerUI();
+  updateCartHistoryUI();
+  updateHistoryUI();
+  updateStreakUI();
+}
+
+// ========== Daily streak ==========
+// A day counts if at least one food was logged. If today has nothing yet,
+// the streak is still "alive" from yesterday until midnight.
+function currentStreak() {
+  const d = new Date();
+  d.setHours(12, 0, 0, 0); // noon avoids daylight-saving edge cases
+  const hasLog = () => (dailyLogs[dateKey(d)] || []).length > 0;
+
+  if (!hasLog()) d.setDate(d.getDate() - 1); // today not logged yet
+  let streak = 0;
+  while (hasLog()) {
+    streak++;
+    d.setDate(d.getDate() - 1); // setDate handles month/year boundaries
+  }
+  return streak;
+}
+
+// Different emoji as the streak grows.
+function streakEmoji(n) {
+  if (n >= 30) return '👑';
+  if (n >= 14) return '🏆';
+  if (n >= 7)  return '💪';
+  if (n >= 3)  return '🔥';
+  return '🌱';
+}
+
+function updateStreakUI() {
+  const n = currentStreak();
+  const loggedToday = todayEntries().length > 0;
+  if (n === 0) {
+    streakEl.textContent = '🌱 Log a food today to start a streak!';
+  } else if (!loggedToday) {
+    streakEl.textContent = `${streakEmoji(n)} ${n}-day streak — log something today to keep it going!`;
+  } else {
+    streakEl.textContent = `${streakEmoji(n)} ${n}-day streak!`;
+  }
+}
+
+// ========== Favourites & recent foods ==========
+// A stable key per food: custom foods have an id; USDA foods are unique by name.
+function foodKey(food) {
+  return food.source === 'custom' ? food.id : 'usda:' + food.name;
+}
+
+// Look a key back up. Returns undefined if the food no longer exists
+// (e.g. a deleted custom food), so it quietly drops out of the lists.
+// This is a linear scan, O(n) per lookup; fine for a handful of chips.
+function findFood(key) {
+  return combinedFoods.find(f => foodKey(f) === key);
+}
+
+function isFavorite(food) {
+  return favorites.includes(foodKey(food));
+}
+
+function toggleFavorite(food) {
+  const key = foodKey(food);
+  favorites = isFavorite(food) ? favorites.filter(k => k !== key) : [...favorites, key];
+  localStorage.setItem('favorites', JSON.stringify(favorites));
+  updateFavoriteButton();
+  renderQuickPicks();
+}
+
+// Move this food to the front of the recent list (no duplicates, max 8).
+function pushRecent(food) {
+  const key = foodKey(food);
+  recentFoods = [key, ...recentFoods.filter(k => k !== key)].slice(0, MAX_RECENT);
+  localStorage.setItem('recentFoods', JSON.stringify(recentFoods));
+  renderQuickPicks();
+}
+
+function updateFavoriteButton() {
+  if (!selectedFood) return;
+  const fav = isFavorite(selectedFood);
+  favoriteBtn.textContent = fav ? '★ Favourite' : '☆ Add to favourites';
+  favoriteBtn.setAttribute('aria-pressed', String(fav));
+}
+
+function renderQuickPicks() {
+  quickPicks.innerHTML = '';
+  const rows = [
+    ['⭐ Favourites', favorites],
+    ['🕘 Recent', recentFoods]
+  ];
+  let shown = 0;
+  rows.forEach(([title, keys]) => {
+    const foodsInRow = keys.map(findFood).filter(Boolean);
+    if (!foodsInRow.length) return;
+    const row = document.createElement('div');
+    row.className = 'quick-row';
+    const label = document.createElement('span');
+    label.className = 'quick-label';
+    label.textContent = title;
+    row.appendChild(label);
+    foodsInRow.forEach(food => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip';
+      chip.textContent = food.name;
+      chip.title = food.name; // full name on hover when the chip is cut off
+      chip.onclick = () => showDetails(food);
+      row.appendChild(chip);
+    });
+    quickPicks.appendChild(row);
+    shown++;
+  });
+  quickPicks.hidden = shown === 0;
+}
+
+// ========== Saved meals ==========
+function saveMeals() {
+  localStorage.setItem('meals', JSON.stringify(meals));
+}
+
+function saveCartAsMeal() {
+  const name = mealNameInput.value.trim();
+  const entries = todayEntries();
+  if (!entries.length) { mealMsg.textContent = "Add some foods to today's cart first."; return; }
+  if (!name)           { mealMsg.textContent = 'Give the meal a name first.'; return; }
+
+  // Copy each entry without its timestamp; it gets a fresh one when logged.
+  const items = entries.map(({ name, amount, unit, macros }) => ({ name, amount, unit, macros }));
+  meals.push({ id: uid(), name, items });
+  saveMeals();
+  mealNameInput.value = '';
+  mealMsg.textContent = `Saved "${name}" (${items.length} item${items.length === 1 ? '' : 's'}).`;
+  renderMeals();
+}
+
+function renderMeals() {
+  mealsList.innerHTML = '';
+  mealsEmpty.hidden = meals.length > 0;
+
+  meals.forEach(meal => {
+    const kcal = Math.round(totalsFor(meal.items).calories);
+    const li = document.createElement('li');
+    li.className = 'meal-item';
+
+    const text = document.createElement('span');
+    text.textContent = `${meal.name} — ${meal.items.length} item${meal.items.length === 1 ? '' : 's'} · ${kcal} kcal`;
+    text.title = meal.items.map(i => `${i.name} (${formatQuantity(i.amount, i.unit)})`).join('\n');
+    li.appendChild(text);
+
+    const logBtn = document.createElement('button');
+    logBtn.type = 'button';
+    logBtn.className = 'meal-log-btn';
+    logBtn.textContent = 'Log meal';
+    logBtn.onclick = () => logEntries(meal.items);
+    li.appendChild(logBtn);
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'remove-btn';
+    delBtn.textContent = '✕';
+    delBtn.title = 'Delete meal';
+    delBtn.onclick = () => {
+      meals = meals.filter(m => m.id !== meal.id);
+      saveMeals();
+      renderMeals();
+    };
+    li.appendChild(delBtn);
+
+    mealsList.appendChild(li);
+  });
+}
 
 // ========== Helpers ==========
 function uid() {
@@ -139,7 +410,7 @@ function updateGoalsUI() {
 }
 
 function updateStatusLine() {
-  const diff = trackerTotals.calories - goals.calories;
+  const diff = totalsFor(todayEntries()).calories - goals.calories;
   let msg = '';
   if (goalMode === 'deficit') {
     if (diff <= -50) msg = `Under by ${Math.abs(Math.round(diff))} kcal — nice for a deficit.`;
@@ -158,23 +429,31 @@ function updateStatusLine() {
 }
 
 function updateTrackerUI() {
-  trackerCalEl.textContent  = `Calories: ${trackerTotals.calories.toFixed(1)} / ${goals.calories}`;
-  trackerProtEl.textContent = `Protein: ${trackerTotals.protein.toFixed(1)}g / ${goals.protein}g`;
-  trackerCarbEl.textContent = `Carbs: ${trackerTotals.carbs.toFixed(1)}g / ${goals.carbs}g`;
-  trackerFatEl.textContent  = `Fat: ${trackerTotals.fat.toFixed(1)}g / ${goals.fat}g`;
+  const t = totalsFor(todayEntries());
+  trackerCalEl.textContent  = `Calories: ${t.calories.toFixed(1)} / ${goals.calories}`;
+  trackerProtEl.textContent = `Protein: ${t.protein.toFixed(1)}g / ${goals.protein}g`;
+  trackerCarbEl.textContent = `Carbs: ${t.carbs.toFixed(1)}g / ${goals.carbs}g`;
+  trackerFatEl.textContent  = `Fat: ${t.fat.toFixed(1)}g / ${goals.fat}g`;
   updateStatusLine();
 }
 
+// One line of text for a logged entry, e.g.
+// "7:42 PM · Banana — 100 g: 89.0 kcal, 1.1g P, 22.8g C, 0.3g F"
+function entryText(entry) {
+  const time = entry.time ? `${formatTime(entry.time)} · ` : '';
+  return `${time}${entry.name} — ${formatQuantity(entry.amount, entry.unit)}: ` +
+    `${entry.macros.calories.toFixed(1)} kcal, ` +
+    `${entry.macros.protein.toFixed(1)}g P, ` +
+    `${entry.macros.carbs.toFixed(1)}g C, ` +
+    `${entry.macros.fat.toFixed(1)}g F`;
+}
+
 function updateCartHistoryUI() {
+  const entries = todayEntries();
   cartHistoryList.innerHTML = '';
-  cartHistory.forEach((entry, i) => {
+  entries.forEach((entry, i) => {
     const li = document.createElement('li');
-    li.textContent =
-      `${entry.name} — ${entry.amount} ${entry.unit}: ` +
-      `${entry.macros.calories.toFixed(1)} kcal, ` +
-      `${entry.macros.protein.toFixed(1)}g P, ` +
-      `${entry.macros.carbs.toFixed(1)}g C, ` +
-      `${entry.macros.fat.toFixed(1)}g F`;
+    li.textContent = entryText(entry); // textContent, not innerHTML: food names can be user-typed
 
     const btn = document.createElement('button');
     btn.textContent = '✕';
@@ -183,6 +462,47 @@ function updateCartHistoryUI() {
     li.appendChild(btn);
 
     cartHistoryList.appendChild(li);
+  });
+
+  // Item-count badge on the cart button. Every cart change (add, remove,
+  // reset, page load) calls this function, so the badge always matches.
+  cartCountBadge.textContent = entries.length;
+  cartCountBadge.hidden = entries.length === 0;
+}
+
+// Past days (newest first, up to 7), each expandable to show its entries.
+// Uses <details>/<summary>, which opens and closes without any JavaScript.
+function updateHistoryUI() {
+  const today = dateKey();
+  const pastKeys = Object.keys(dailyLogs)
+    .filter(k => k !== today && dailyLogs[k].length)
+    .sort()                      // "YYYY-MM-DD" strings sort in date order
+    .reverse()
+    .slice(0, 7);
+
+  historyList.innerHTML = '';
+  historyEmpty.hidden = pastKeys.length > 0;
+
+  pastKeys.forEach(key => {
+    const entries = dailyLogs[key];
+    const t = totalsFor(entries);
+    const label = keyToDate(key).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent =
+      `${label} — ${Math.round(t.calories)} kcal · ${Math.round(t.protein)}g P · ` +
+      `${Math.round(t.carbs)}g C · ${Math.round(t.fat)}g F (${entries.length} item${entries.length === 1 ? '' : 's'})`;
+    details.appendChild(summary);
+
+    const ul = document.createElement('ul');
+    entries.forEach(e => {
+      const li = document.createElement('li');
+      li.textContent = entryText(e);
+      ul.appendChild(li);
+    });
+    details.appendChild(ul);
+    historyList.appendChild(details);
   });
 }
 
@@ -206,36 +526,30 @@ saveGoalsBtn.addEventListener('click', () => {
 
   goals = computeGoals(userTDEE, userWeightLbs);
   updateGoalsUI();
-  updateTrackerUI();
+  refreshLogUI();
 });
 
 // ========== Cart toggle & removal ==========
 toggleCartBtn.addEventListener('click', () => {
   const isHidden = getComputedStyle(cartHistorySection).display === 'none';
   cartHistorySection.style.setProperty('display', isHidden ? 'block' : 'none', 'important');
-  toggleCartBtn.textContent = isHidden ? 'Hide Cart ✕' : 'Show Cart 🛒';
+  // Change only the label; setting the whole button's text would wipe out the badge.
+  cartBtnLabel.textContent = isHidden ? 'Hide Cart ✕' : 'Show Cart 🛒';
 });
 
 function removeCartItem(index) {
-  const entry = cartHistory[index];
-  trackerTotals.calories -= entry.macros.calories;
-  trackerTotals.protein  -= entry.macros.protein;
-  trackerTotals.carbs    -= entry.macros.carbs;
-  trackerTotals.fat      -= entry.macros.fat;
-  localStorage.setItem('trackerTotals', JSON.stringify(trackerTotals));
-  cartHistory.splice(index, 1);
-  localStorage.setItem('cartHistory', JSON.stringify(cartHistory));
-  updateTrackerUI();
-  updateCartHistoryUI();
+  const key = dateKey();
+  if (!dailyLogs[key]) return;
+  dailyLogs[key].splice(index, 1);
+  saveLogs();
+  refreshLogUI();
 }
 
+// Clears TODAY only; past days stay in the history.
 resetBtn.addEventListener('click', () => {
-  trackerTotals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
-  localStorage.setItem('trackerTotals', JSON.stringify(trackerTotals));
-  cartHistory = [];
-  localStorage.removeItem('cartHistory');
-  updateTrackerUI();
-  updateCartHistoryUI();
+  delete dailyLogs[dateKey()];
+  saveLogs();
+  refreshLogUI();
 });
 
 // ========== Search & selection ==========
@@ -243,9 +557,33 @@ function renderSearchResults() {
   const q = searchBox.value.trim().toLowerCase();
   resultsList.innerHTML = '';
   if (q.length < 2) return;
+
+  // Rank matches so the most likely food comes first:
+  //   0 = name starts with the query      ("milk" -> "Milk, whole")
+  //   1 = a word in the name starts with it ("Chocolate milk")
+  //   2 = query appears anywhere          ("Egg casserole with ... milk ...")
+  // Ties: shorter names first, since they're usually the plain food.
+  const rank = name => {
+    if (name.startsWith(q)) return 0;
+    if (name.includes(' ' + q) || name.includes(',' + q) || name.includes('(' + q)) return 1;
+    return 2;
+  };
+
+  // The USDA download stores some foods twice (found under two keywords),
+  // so skip any name already shown. A Set makes each check O(1).
+  const seen = new Set();
+
   combinedFoods
-    .filter(f => f.name.toLowerCase().includes(q))
+    .map(f => ({ food: f, name: f.name.toLowerCase() }))
+    .filter(x => x.name.includes(q))
+    .sort((a, b) => rank(a.name) - rank(b.name) || a.name.length - b.name.length)
+    .filter(x => {
+      if (seen.has(x.name)) return false;
+      seen.add(x.name);
+      return true;
+    })
     .slice(0, 10)
+    .map(x => x.food)
     .forEach(food => {
       const li = document.createElement('li');
 
@@ -288,7 +626,7 @@ function showDetails(food) {
   unitSelect.innerHTML = '';
   const baseOpt = document.createElement('option');
   baseOpt.value = 1;
-  baseOpt.textContent = '1 g (per gram)';
+  baseOpt.textContent = GRAM_LABEL;
   unitSelect.appendChild(baseOpt);
 
   const servings = food.servings || {};
@@ -301,9 +639,26 @@ function showDetails(food) {
     }
   }
 
-  amountInput.value = 1;
+  // Start at 100 g: the food data is per 100 g, like a nutrition label.
+  amountInput.value = DEFAULT_GRAMS;
   calcDisplay.innerHTML = '';
   detailsCard.style.display = 'block';
+
+  updateFavoriteButton();
+  pushRecent(food);
+}
+
+// Switching unit resets the amount to a sensible starting value:
+// 100 for grams, 1 for a serving like "1 cup" (otherwise 100 g -> 100 cups).
+unitSelect.addEventListener('change', () => {
+  amountInput.value = unitSelect.value === '1' ? DEFAULT_GRAMS : 1;
+});
+
+// "100 g" for grams, "2 × 1 cup" for other servings.
+// Older cart entries saved the gram unit as '1 g (per gram)', so accept both.
+function formatQuantity(amount, unit) {
+  const isGrams = unit === GRAM_LABEL || unit === '1 g (per gram)';
+  return isGrams ? `${amount} g` : `${amount} × ${unit}`;
 }
 
 function calculateMacrosForSelected() {
@@ -335,22 +690,12 @@ addBtn.addEventListener('click', () => {
   const m = calculateMacrosForSelected();
   if (!m) return;
 
-  trackerTotals.calories += m.calories;
-  trackerTotals.protein  += m.protein;
-  trackerTotals.carbs    += m.carbs;
-  trackerTotals.fat      += m.fat;
-  localStorage.setItem('trackerTotals', JSON.stringify(trackerTotals));
-  updateTrackerUI();
-
-  const entry = {
+  logEntries([{
     name:   selectedFood.name,
     amount: parseFloat(amountInput.value),
     unit:   unitSelect.options[unitSelect.selectedIndex].textContent,
     macros: m
-  };
-  cartHistory.unshift(entry);
-  localStorage.setItem('cartHistory', JSON.stringify(cartHistory));
-  updateCartHistoryUI();
+  }]);
 });
 
 // ========== Add / Edit / Delete custom foods ==========
@@ -420,6 +765,7 @@ editForm.addEventListener('submit', (e) => {
 
   editSection.style.display = 'none';
   renderSearchResults();
+  renderQuickPicks(); // name may have changed, or the food may be gone
 });
 
 // Delete custom food
@@ -440,6 +786,7 @@ deleteCustomBtn.addEventListener('click', () => {
 
   editSection.style.display = 'none';
   renderSearchResults();
+  renderQuickPicks(); // name may have changed, or the food may be gone
 });
 
 // Cancel edit
@@ -448,3 +795,15 @@ cancelEditBtn.addEventListener('click', () => {
 });
 
 
+
+// Stop the mouse wheel / trackpad from changing number inputs.
+// Browsers change a focused <input type="number"> when you scroll over it,
+// so un-focus it instead and let the scroll move the page as normal.
+// One listener on the document covers every number box on the page
+// (including ones added later), because wheel events bubble up.
+document.addEventListener("wheel", (event) => {
+  const el = event.target;
+  if (el instanceof HTMLInputElement && el.type === "number" && el === document.activeElement) {
+    el.blur();
+  }
+}, { passive: true });

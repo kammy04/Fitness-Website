@@ -49,6 +49,129 @@ button:hover {
   transform: scale(1.03);
 }
 
+/* Favourites & recent quick picks */
+#quick-picks[hidden] {
+  display: none;
+}
+.quick-row {
+  margin: 6px 0;
+}
+.quick-label {
+  font-weight: 600;
+  margin-right: 8px;
+}
+.chip {
+  background-color: #eef4ff;
+  color: #0057c2;
+  padding: 4px 12px;
+  margin: 4px 6px 0 0;
+  font-size: 14px;
+  border-radius: 999px;
+  /* long USDA names: cut off with "…" (full name shows on hover) */
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.chip:hover {
+  background-color: #dce8ff;
+}
+.star-btn {
+  background-color: #fff;
+  color: #b26b00;
+  border: 1px solid #ffd591;
+  padding: 6px 14px;
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+.star-btn:hover,
+.star-btn[aria-pressed="true"] {
+  background-color: #fff7e6;
+}
+
+/* Saved meals */
+.meal-save {
+  margin-top: 14px;
+}
+.meal-save input {
+  margin-bottom: 4px;
+}
+.meal-save button {
+  margin: 0 10px 0 0;
+}
+#meals-list {
+  padding-left: 18px;
+}
+.meal-item {
+  margin-bottom: 6px;
+}
+.meal-log-btn {
+  margin: 0 0 0 10px;
+  padding: 3px 12px;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+/* Daily streak banner */
+.streak {
+  display: inline-block;
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 600;
+}
+
+/* Past days list */
+#history-list details {
+  background: #fff;
+  border: 1px solid #e3e8ef;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+#history-list summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+#history-list ul {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+.muted[hidden] {
+  display: none;
+}
+
+/* ✕ button next to each cart entry: keep it small and off the text */
+.remove-btn {
+  margin: 0 0 0 10px;
+  padding: 2px 9px;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+/* Item-count bubble on the "Show Cart" button */
+.cart-badge {
+  display: inline-block;
+  min-width: 22px;
+  padding: 2px 7px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background-color: #ff3b30;
+  color: white;
+  font-size: 13px;
+  font-weight: bold;
+  line-height: 18px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* display:inline-block above would override the HTML hidden attribute */
+.cart-badge[hidden] {
+  display: none;
+}
+
 #recommendation {
   border-top: none;
   padding-top: 20px;

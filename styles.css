@@ -104,3 +104,14 @@ a.back-link {
 a.back-link:hover {
   text-decoration: underline;
 }
+
+/* Suggested training days under the workout plan */
+.training-days {
+  background: #eef7ee;
+  border-left: 4px solid #34a853;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+.training-days[hidden] {
+  display: none;
+}

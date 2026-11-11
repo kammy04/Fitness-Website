@@ -29,9 +29,13 @@
   <input type="text" id="search-box" placeholder="Search for a food..." />
   <ul id="search-results"></ul>
 
+  <!-- Favourites & recent foods (filled in by script.js) -->
+  <div id="quick-picks" hidden></div>
+
   <!-- Selected Food Details -->
   <div id="food-details" class="food-card" style="display: none;">
     <h2 id="food-name"></h2>
+    <button id="favorite-btn" type="button" class="star-btn" aria-pressed="false">☆ Add to favourites</button>
     <p id="food-brand"></p>
     <ul id="macro-values"></ul>
 
@@ -77,6 +81,7 @@
   <!-- Daily Macro Tracker -->
   <section id="daily-tracker">
     <h3>Daily Macro Tracker</h3>
+    <p id="streak-line" class="streak"></p>
     <p id="calorie-policy" class="muted"></p>
     <ul id="tracker-macros">
       <li id="tracker-calories">Calories: 0 / <span id="goal-calories"></span></li>
@@ -88,13 +93,36 @@
   </section>
 
   <!-- Cart Toggle Button -->
-  <button id="toggle-cart-btn" type="button">Show Cart 🛒</button>
+  <button id="toggle-cart-btn" type="button">
+    <span id="cart-btn-label">Show Cart 🛒</span>
+    <span id="cart-count" class="cart-badge" hidden>0</span>
+  </button>
 
   <!-- Cart History & Reset (initially hidden) -->
   <section id="cart-history" style="display: none;">
-    <h3>Cart History</h3>
+    <h3>Today's Cart</h3>
     <ul id="cart-history-list"></ul>
-    <button id="reset-cart" type="button">Reset Cart</button>
+    <button id="reset-cart" type="button">Reset Today's Cart</button>
+
+    <div class="meal-save">
+      <input type="text" id="meal-name" placeholder="Meal name, e.g. Usual breakfast" maxlength="40" />
+      <button id="save-meal-btn" type="button">Save cart as meal</button>
+      <small id="meal-msg" class="muted"></small>
+    </div>
+  </section>
+
+  <!-- Saved meals: log several foods in one click -->
+  <section id="meals-section">
+    <h3>My Meals 🍽️</h3>
+    <p id="meals-empty" class="muted">No meals yet. Add foods to today's cart, then use "Save cart as meal".</p>
+    <ul id="meals-list"></ul>
+  </section>
+
+  <!-- Past days (kept in localStorage, newest first) -->
+  <section id="history-section">
+    <h3>Past Days 📅</h3>
+    <p id="history-empty" class="muted">Nothing yet. Each day's log shows up here the next day.</p>
+    <div id="history-list"></div>
   </section>
 
   <!-- Custom Food Form -->
