@@ -1,101 +1,450 @@
-document.addEventListener("DOMContentLoaded", function() {
-    const cart = {};
-    let calorieGoal = 0;
-    let totalCalories = 0;
+// script.js — goals + tracker + cart toggle/removal + custom foods (add/edit/delete)
 
-    const calorieGoalForm = document.getElementById('calorie-goal-form');
-    const calorieGoalDisplay = document.getElementById('calorie-goal-display');
-    const totalCaloriesDisplay = document.getElementById('total-calories');
-    const summaryCaloriesDisplay = document.getElementById('summary-calories');
-    const statusMessage = document.getElementById('status-message');
+// ========== Storage-backed state ==========
+let customFoods   = JSON.parse(localStorage.getItem('customFoods') || '[]');
+migrateCustomFoods(); // ensure ids & source
+let combinedFoods = (typeof foods !== 'undefined' ? foods : []).concat(customFoods);
 
-    if (calorieGoalForm) {
-        calorieGoalForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            calorieGoal = parseInt(document.getElementById('calorie-goal').value);
-            calorieGoalDisplay.innerText = calorieGoal;
-            updateStatus();
-        });
-    }
+let cartHistory   = JSON.parse(localStorage.getItem('cartHistory')   || '[]');
+let trackerTotals = JSON.parse(localStorage.getItem('trackerTotals') || '{"calories":0,"protein":0,"carbs":0,"fat":0}');
 
-/**
- * Adds an event listener to the form with the ID 'custom-food-form' to handle form submission.
- * When the form is submitted, it prevents the default form submission behavior,
- * retrieves the food foodName and calorie values from the form inputs, and calls the addFood function.
- */
-document.getElementById('add-custom-food').addEventListener('click', function(event) {
-    event.preventDefault();
-    const foodName = document.getElementById('custom-food-name').value;
-    const customFoodCalories = parseInt(document.getElementById('custom-food-calories').value, 10);
-    addFood(foodName, customFoodCalories);
+let userTDEE      = parseFloat(localStorage.getItem('userTDEE'))      || null;
+let userWeightLbs = parseFloat(localStorage.getItem('userWeightLbs')) || null;
+let goalMode      = localStorage.getItem('goalMode') || 'maintenance';
+
+let goals = computeGoals(userTDEE, userWeightLbs);
+
+// ========== Elements ==========
+const searchBox         = document.getElementById('search-box');
+const resultsList       = document.getElementById('search-results');
+
+const detailsCard       = document.getElementById('food-details');
+const nameEl            = document.getElementById('food-name');
+const brandEl           = document.getElementById('food-brand');
+const macroList         = document.getElementById('macro-values');
+const amountInput       = document.getElementById('amount');
+const unitSelect        = document.getElementById('serving-select');
+const calcBtn           = document.getElementById('calculate-btn');
+const addBtn            = document.getElementById('add-selected-food');
+const calcDisplay       = document.getElementById('calculated-macros');
+
+const goalWeightInput   = document.getElementById('goal-weight-lbs');
+const goalTDEEInput     = document.getElementById('goal-tdee');
+const goalModeSelect    = document.getElementById('goal-mode');
+const saveGoalsBtn      = document.getElementById('save-goals');
+
+const goalCalEl         = document.getElementById('goal-calories');
+const goalProtEl        = document.getElementById('goal-protein');
+const goalCarbEl        = document.getElementById('goal-carbs');
+const goalFatEl         = document.getElementById('goal-fat');
+const caloriePolicyEl   = document.getElementById('calorie-policy');
+const calorieStatusEl   = document.getElementById('calorie-status');
+
+// Tracker UI elements (MISSING before)
+const trackerCalEl  = document.getElementById('tracker-calories');
+const trackerProtEl = document.getElementById('tracker-protein');
+const trackerCarbEl = document.getElementById('tracker-carbs');
+const trackerFatEl  = document.getElementById('tracker-fat');
+
+
+const toggleCartBtn     = document.getElementById('toggle-cart-btn');
+const cartHistorySection= document.getElementById('cart-history');
+const cartHistoryList   = document.getElementById('cart-history-list');
+const resetBtn          = document.getElementById('reset-cart');
+
+const customForm        = document.getElementById('custom-food-form');
+const cfName            = document.getElementById('cf-name');
+const cfUnit            = document.getElementById('cf-unit');
+const cfCal             = document.getElementById('cf-cal');
+const cfCarb            = document.getElementById('cf-carb');
+const cfProtein         = document.getElementById('cf-protein');
+const cfFat             = document.getElementById('cf-fat');
+
+// Edit panel
+const editSection       = document.getElementById('edit-custom-section');
+const editForm          = document.getElementById('edit-custom-form');
+const efId              = document.getElementById('ef-id');
+const efName            = document.getElementById('ef-name');
+const efUnit            = document.getElementById('ef-unit');
+const efCal             = document.getElementById('ef-cal');
+const efCarb            = document.getElementById('ef-carb');
+const efProtein         = document.getElementById('ef-protein');
+const efFat             = document.getElementById('ef-fat');
+const saveCustomChanges = document.getElementById('save-custom-changes');
+const deleteCustomBtn   = document.getElementById('delete-custom-food');
+const cancelEditBtn     = document.getElementById('cancel-edit');
+
+let selectedFood = null;
+
+// ========== Init ==========
+prefillGoalForm();
+updateGoalsUI();
+updateTrackerUI();
+updateCartHistoryUI();
+
+// ========== Helpers ==========
+function uid() {
+  return 'cf_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+function migrateCustomFoods() {
+  let changed = false;
+  customFoods.forEach(f => {
+    if (!f.id) { f.id = uid(); changed = true; }
+    if (!f.source) { f.source = 'custom'; changed = true; }
+    if (!f.servings) { f.servings = {}; changed = true; }
+  });
+  if (changed) localStorage.setItem('customFoods', JSON.stringify(customFoods));
+}
+
+function computeGoals(tdee, weightLbs) {
+  const kcal    = Number.isFinite(tdee) ? tdee : 2000;
+  const protein = Number.isFinite(weightLbs) ? weightLbs * 0.8 : 150;
+  const fat     = (kcal * 0.25) / 9;
+  let carbs     = (kcal - (protein * 4 + fat * 9)) / 4;
+  if (!Number.isFinite(carbs) || carbs < 0) carbs = 0;
+  return {
+    calories: Math.round(kcal),
+    protein:  Math.round(protein),
+    carbs:    Math.round(carbs),
+    fat:      Math.round(fat)
+  };
+}
+
+function prefillGoalForm() {
+  if (userWeightLbs) goalWeightInput.value = Math.round(userWeightLbs);
+  if (userTDEE)      goalTDEEInput.value   = Math.round(userTDEE);
+  goalModeSelect.value = goalMode;
+
+  // Optional: hide the goal form if both exist
+  if (userWeightLbs && userTDEE) {
+    const goalSection = document.getElementById('goal-settings');
+    if (goalSection) goalSection.style.display = 'none';
+  }
+}
+
+function policyText() {
+  if (goalMode === 'deficit')   return `Goal policy: eat at most ${goals.calories} kcal/day.`;
+  if (goalMode === 'surplus')   return `Goal policy: eat at least ${goals.calories} kcal/day.`;
+  return `Goal policy: eat about ${goals.calories} kcal/day.`;
+}
+
+function updateGoalsUI() {
+  goalCalEl.textContent  = goals.calories;
+  goalProtEl.textContent = goals.protein;
+  goalCarbEl.textContent = goals.carbs;
+  goalFatEl.textContent  = goals.fat;
+  caloriePolicyEl.textContent = policyText();
+  localStorage.setItem('dailyGoals', JSON.stringify(goals));
+}
+
+function updateStatusLine() {
+  const diff = trackerTotals.calories - goals.calories;
+  let msg = '';
+  if (goalMode === 'deficit') {
+    if (diff <= -50) msg = `Under by ${Math.abs(Math.round(diff))} kcal — nice for a deficit.`;
+    else if (Math.abs(diff) < 50) msg = `On track (within ±50 kcal).`;
+    else msg = `Over by ${Math.round(diff)} kcal — aim below ${goals.calories}.`;
+  } else if (goalMode === 'surplus') {
+    if (diff >= 50) msg = `Over by ${Math.round(diff)} kcal — good for a surplus.`;
+    else if (Math.abs(diff) < 50) msg = `On track (within ±50 kcal).`;
+    else msg = `Under by ${Math.abs(Math.round(diff))} kcal — aim above ${goals.calories}.`;
+  } else {
+    if (Math.abs(diff) < 50) msg = `On track (within ±50 kcal).`;
+    else if (diff > 0) msg = `Over maintenance by ${Math.round(diff)} kcal.`;
+    else msg = `Under maintenance by ${Math.abs(Math.round(diff))} kcal.`;
+  }
+  calorieStatusEl.textContent = msg;
+}
+
+function updateTrackerUI() {
+  trackerCalEl.textContent  = `Calories: ${trackerTotals.calories.toFixed(1)} / ${goals.calories}`;
+  trackerProtEl.textContent = `Protein: ${trackerTotals.protein.toFixed(1)}g / ${goals.protein}g`;
+  trackerCarbEl.textContent = `Carbs: ${trackerTotals.carbs.toFixed(1)}g / ${goals.carbs}g`;
+  trackerFatEl.textContent  = `Fat: ${trackerTotals.fat.toFixed(1)}g / ${goals.fat}g`;
+  updateStatusLine();
+}
+
+function updateCartHistoryUI() {
+  cartHistoryList.innerHTML = '';
+  cartHistory.forEach((entry, i) => {
+    const li = document.createElement('li');
+    li.textContent =
+      `${entry.name} — ${entry.amount} ${entry.unit}: ` +
+      `${entry.macros.calories.toFixed(1)} kcal, ` +
+      `${entry.macros.protein.toFixed(1)}g P, ` +
+      `${entry.macros.carbs.toFixed(1)}g C, ` +
+      `${entry.macros.fat.toFixed(1)}g F`;
+
+    const btn = document.createElement('button');
+    btn.textContent = '✕';
+    btn.className   = 'remove-btn';
+    btn.onclick     = () => removeCartItem(i);
+    li.appendChild(btn);
+
+    cartHistoryList.appendChild(li);
+  });
+}
+
+// ========== Goals actions ==========
+saveGoalsBtn.addEventListener('click', () => {
+  const w = parseFloat(goalWeightInput.value);
+  const t = parseFloat(goalTDEEInput.value);
+  const mode = goalModeSelect.value;
+
+  userWeightLbs = Number.isFinite(w) ? w : null;
+  userTDEE      = Number.isFinite(t) ? t : null;
+  goalMode      = mode;
+
+  if (userWeightLbs) localStorage.setItem('userWeightLbs', String(userWeightLbs));
+  else localStorage.removeItem('userWeightLbs');
+
+  if (userTDEE) localStorage.setItem('userTDEE', String(userTDEE));
+  else localStorage.removeItem('userTDEE');
+
+  localStorage.setItem('goalMode', goalMode);
+
+  goals = computeGoals(userTDEE, userWeightLbs);
+  updateGoalsUI();
+  updateTrackerUI();
 });
 
-document.getElementById('remove-custom-food').addEventListener('click', function(event) {
-    event.preventDefault();
-    const foodName = document.getElementById('custom-food-name').value;
-    const customFoodCalories = parseInt(document.getElementById('custom-food-calories').value, 10);
-    removeFood(foodName, customFoodCalories);
+// ========== Cart toggle & removal ==========
+toggleCartBtn.addEventListener('click', () => {
+  const isHidden = getComputedStyle(cartHistorySection).display === 'none';
+  cartHistorySection.style.setProperty('display', isHidden ? 'block' : 'none', 'important');
+  toggleCartBtn.textContent = isHidden ? 'Hide Cart ✕' : 'Show Cart 🛒';
 });
 
-    function addFood(foodName, calories) {
-        if (!cart[foodName]) {
-            cart[foodName] = { quantity: 0, calories: calories };
-        }
-        cart[foodName].quantity += 1;
-        totalCalories += calories;
-        updateCart();
-        totalCaloriesDisplay.innerText = totalCalories;
-        updateStatus();
-    }
+function removeCartItem(index) {
+  const entry = cartHistory[index];
+  trackerTotals.calories -= entry.macros.calories;
+  trackerTotals.protein  -= entry.macros.protein;
+  trackerTotals.carbs    -= entry.macros.carbs;
+  trackerTotals.fat      -= entry.macros.fat;
+  localStorage.setItem('trackerTotals', JSON.stringify(trackerTotals));
+  cartHistory.splice(index, 1);
+  localStorage.setItem('cartHistory', JSON.stringify(cartHistory));
+  updateTrackerUI();
+  updateCartHistoryUI();
+}
 
-    function removeFood(foodName, calories) {
-        if (cart[foodName] && cart[foodName].quantity > 0) {
-            cart[foodName].quantity -= 1;
-        if (cart[foodName].quantity === 0) {
-                delete cart[foodName];
-            }
-        }
-        totalCalories -= calories;
-        updateCart();
-        totalCaloriesDisplay.innerText = totalCalories;
-        updateStatus();
-    }
-
-    function updateCart() {
-        const cartItems = document.getElementById('cart-items');
-        cartItems.innerHTML = '';
-        for (const [name, item] of Object.entries(cart)) {
-            const li = document.createElement('li');
-            li.textContent = `${name} - Quantity: ${item.quantity}`;
-            cartItems.appendChild(li);
-        }
-        document.getElementById('total-calories').textContent = totalCalories;
-    }
-
-    function updateStatus() {
-        const calorieDifference = calorieGoal - totalCalories;
-        summaryCaloriesDisplay.innerText = totalCalories;
-        if (calorieDifference >= -100 && calorieDifference <= 100) {
-            statusMessage.innerText = "You're within your calorie goal!";
-            statusMessage.style.color = "green";
-        } else if (calorieDifference < -100) {
-            statusMessage.innerText = "You've exceeded your calorie goal.";
-            statusMessage.style.color = "red";
-        } else {
-            statusMessage.innerText = "You can eat a bit more to reach your goal.";
-            statusMessage.style.color = "orange";
-        }
-    }
-
-
-
-    window.resetTracker = function() {
-        totalCalories = 0;
-        totalCaloriesDisplay.innerText = totalCalories;
-        summaryCaloriesDisplay.innerText = totalCalories;
-        statusMessage.innerText = '';
-    };
-
-    window.addFood = addFood;
-    window.removeFood = removeFood;
+resetBtn.addEventListener('click', () => {
+  trackerTotals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+  localStorage.setItem('trackerTotals', JSON.stringify(trackerTotals));
+  cartHistory = [];
+  localStorage.removeItem('cartHistory');
+  updateTrackerUI();
+  updateCartHistoryUI();
 });
+
+// ========== Search & selection ==========
+function renderSearchResults() {
+  const q = searchBox.value.trim().toLowerCase();
+  resultsList.innerHTML = '';
+  if (q.length < 2) return;
+  combinedFoods
+    .filter(f => f.name.toLowerCase().includes(q))
+    .slice(0, 10)
+    .forEach(food => {
+      const li = document.createElement('li');
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = food.name;
+      nameSpan.style.cursor = 'pointer';
+      nameSpan.onclick = () => showDetails(food);
+      li.appendChild(nameSpan);
+
+      if (food.source === 'custom') {
+        const editBtn = document.createElement('button');
+        editBtn.textContent = 'Edit';
+        editBtn.className = 'edit-btn';
+        editBtn.style.marginLeft = '8px';
+        editBtn.onclick = (e) => {
+          e.stopPropagation();
+          openEditPanel(food);
+        };
+        li.appendChild(editBtn);
+      }
+
+      resultsList.appendChild(li);
+    });
+}
+searchBox.addEventListener('input', renderSearchResults);
+
+// Selected food details
+function showDetails(food) {
+  selectedFood = food;
+
+  nameEl.textContent  = food.name;
+  brandEl.textContent = food.brand || 'Generic';
+  macroList.innerHTML = `
+    <li><strong>Calories:</strong> ${food.calories} (per 100g)</li>
+    <li><strong>Protein:</strong> ${food.protein}g</li>
+    <li><strong>Carbs:</strong> ${food.carbs}g</li>
+    <li><strong>Fat:</strong> ${food.fat}g</li>
+  `;
+
+  unitSelect.innerHTML = '';
+  const baseOpt = document.createElement('option');
+  baseOpt.value = 1;
+  baseOpt.textContent = '1 g (per gram)';
+  unitSelect.appendChild(baseOpt);
+
+  const servings = food.servings || {};
+  for (const [label, grams] of Object.entries(servings)) {
+    if (label !== '100g' && label !== '1 g (per gram)') {
+      const opt = document.createElement('option');
+      opt.value = grams;
+      opt.textContent = label;
+      unitSelect.appendChild(opt);
+    }
+  }
+
+  amountInput.value = 1;
+  calcDisplay.innerHTML = '';
+  detailsCard.style.display = 'block';
+}
+
+function calculateMacrosForSelected() {
+  if (!selectedFood) return null;
+  const amt        = parseFloat(amountInput.value);
+  const unitGram   = parseFloat(unitSelect.value);
+  const gramsTotal = amt * unitGram;
+  const factor     = gramsTotal / 100; // values are per 100g
+  return {
+    calories: selectedFood.calories * factor,
+    protein:  selectedFood.protein  * factor,
+    carbs:    selectedFood.carbs    * factor,
+    fat:      selectedFood.fat      * factor
+  };
+}
+
+calcBtn.addEventListener('click', () => {
+  const m = calculateMacrosForSelected();
+  if (!m) return;
+  calcDisplay.innerHTML = `
+    <li>Calories: ${m.calories.toFixed(1)}</li>
+    <li>Protein: ${m.protein.toFixed(1)}g</li>
+    <li>Carbs: ${m.carbs.toFixed(1)}g</li>
+    <li>Fat: ${m.fat.toFixed(1)}g</li>
+  `;
+});
+
+addBtn.addEventListener('click', () => {
+  const m = calculateMacrosForSelected();
+  if (!m) return;
+
+  trackerTotals.calories += m.calories;
+  trackerTotals.protein  += m.protein;
+  trackerTotals.carbs    += m.carbs;
+  trackerTotals.fat      += m.fat;
+  localStorage.setItem('trackerTotals', JSON.stringify(trackerTotals));
+  updateTrackerUI();
+
+  const entry = {
+    name:   selectedFood.name,
+    amount: parseFloat(amountInput.value),
+    unit:   unitSelect.options[unitSelect.selectedIndex].textContent,
+    macros: m
+  };
+  cartHistory.unshift(entry);
+  localStorage.setItem('cartHistory', JSON.stringify(cartHistory));
+  updateCartHistoryUI();
+});
+
+// ========== Add / Edit / Delete custom foods ==========
+customForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const newFood = {
+    id: uid(),
+    source: 'custom',
+    name:   cfName.value.trim(),
+    unit:   cfUnit.value,        // stored for reference; calc uses per-100g
+    calories: +cfCal.value,
+    carbs:    +cfCarb.value,
+    protein:  +cfProtein.value,
+    fat:      +cfFat.value,
+    servings: {}
+  };
+  if (!newFood.name) return;
+
+  customFoods.push(newFood);
+  localStorage.setItem('customFoods', JSON.stringify(customFoods));
+  combinedFoods = (typeof foods !== 'undefined' ? foods : []).concat(customFoods);
+
+  customForm.reset();
+  renderSearchResults();
+});
+
+// Open edit panel
+function openEditPanel(food) {
+  efId.value      = food.id;
+  efName.value    = food.name;
+  efUnit.value    = food.unit || '100g';
+  efCal.value     = food.calories;
+  efCarb.value    = food.carbs;
+  efProtein.value = food.protein;
+  efFat.value     = food.fat;
+  editSection.style.setProperty('display', 'block', 'important');
+  // scroll into view for convenience
+  editSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Save changes
+editForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const id = efId.value;
+  const idx = customFoods.findIndex(f => f.id === id);
+  if (idx === -1) return;
+
+  const updated = {
+    ...customFoods[idx],
+    name:    efName.value.trim(),
+    unit:    efUnit.value,
+    calories:+efCal.value,
+    carbs:   +efCarb.value,
+    protein: +efProtein.value,
+    fat:     +efFat.value
+  };
+
+  customFoods[idx] = updated;
+  localStorage.setItem('customFoods', JSON.stringify(customFoods));
+  combinedFoods = (typeof foods !== 'undefined' ? foods : []).concat(customFoods);
+
+  // If the currently shown item is this one, refresh details
+  if (selectedFood && selectedFood.id === id) {
+    selectedFood = updated;
+    showDetails(updated);
+  }
+
+  editSection.style.display = 'none';
+  renderSearchResults();
+});
+
+// Delete custom food
+deleteCustomBtn.addEventListener('click', () => {
+  const id = efId.value;
+  const idx = customFoods.findIndex(f => f.id === id);
+  if (idx === -1) return;
+
+  // If deleting the one being shown, hide details
+  if (selectedFood && selectedFood.id === id) {
+    detailsCard.style.display = 'none';
+    selectedFood = null;
+  }
+
+  customFoods.splice(idx, 1);
+  localStorage.setItem('customFoods', JSON.stringify(customFoods));
+  combinedFoods = (typeof foods !== 'undefined' ? foods : []).concat(customFoods);
+
+  editSection.style.display = 'none';
+  renderSearchResults();
+});
+
+// Cancel edit
+cancelEditBtn.addEventListener('click', () => {
+  editSection.style.display = 'none';
+});
+
+

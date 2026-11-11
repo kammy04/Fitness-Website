@@ -30,10 +30,51 @@ function calculateCalories(weight, height, age, gender, activity) {
   };
 }
 
+// diff units
+document.getElementById("height-unit").addEventListener("change", function () {
+  const unit = this.value;
+  if (unit === "ftin") {
+    document.getElementById("height").style.display = "none";
+    document.getElementById("height-ftin-fields").style.display = "block";
+  } else {
+    document.getElementById("height").style.display = "block";
+    document.getElementById("height-ftin-fields").style.display = "none";
+  }
+});
+
+// Save input values to localStorage on change
+["height", "weight", "age", "gender", "activity", "unit-system", "height-unit", "weight-unit", "height-feet", "height-inches"].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener("input", () => {
+      localStorage.setItem(id, el.value);
+    });
+  }
+});
+
+
 // Function to update the personalized plan based on user input
 function updatePlan() {
-  const height = parseFloat(document.getElementById("height").value);
-  const weight = parseFloat(document.getElementById("weight").value);
+  let height, weight;
+
+  // Handle height unit conversion
+  const heightUnit = document.getElementById("height-unit").value;
+  if (heightUnit === "ftin") {
+    const feet = parseFloat(document.getElementById("height-feet").value);
+    const inches = parseFloat(document.getElementById("height-inches").value);
+    height = (feet * 12 + inches) * 2.54; // to cm
+  } else {
+    height = parseFloat(document.getElementById("height").value);
+  }
+
+  // Handle weight unit conversion
+  const weightUnit = document.getElementById("weight-unit").value;
+  if (weightUnit === "lbs") {
+    weight = parseFloat(document.getElementById("weight").value) * 0.453592;
+  } else {
+    weight = parseFloat(document.getElementById("weight").value);
+  }
+
   const age = parseInt(document.getElementById("age").value);
   const gender = document.getElementById("gender").value;
   const activity = document.getElementById("activity").value;
@@ -51,31 +92,48 @@ function updatePlan() {
   }
 
   const calories = calculateCalories(weight, height, age, gender, activity);
-
+  localStorage.setItem("calorieGoal", calories.maintenance.toFixed(0));
   const dietPlans = {
-    Calorie_deficit: `<a href="./DIetary%20website/FoodDB.html">Consume about ${calories.deficit.toFixed(
-      0
-    )} kcal/day.</a>`,
-    Calorie_surplus: `<a href="./DIetary%20website/FoodDB.html">Consume about ${calories.surplus.toFixed(
-      0
-    )} kcal/day.</a>`,
-    Calorie_maintenance: `<a href="./DIetary%20website/FoodDB.html">Consume about ${calories.maintenance.toFixed(
-      0
-    )} kcal/day.</a>`,
+    Calorie_deficit: `<a href="./DIetary%20website/FoodDB.html">Consume about ${calories.deficit.toFixed(0)} kcal/day.</a>`,
+    Calorie_surplus: `<a href="./DIetary%20website/FoodDB.html">Consume about ${calories.surplus.toFixed(0)} kcal/day.</a>`,
+    Calorie_maintenance: `<a href="./DIetary%20website/FoodDB.html">Consume about ${calories.maintenance.toFixed(0)} kcal/day.</a>`,
   };
+//So once the user clicks one of those links, the target page can retrieve the calorie value.  
 
   return dietPlans;
 }
 
 // Function to handle preference selection and update the plan
 function selectPreference(type, preference) {
-  const dietPlans = updatePlan();
   if (type === "exercise") {
     document.getElementById("exercise-plan").innerHTML =
       workoutPlans[preference];
   } else if (type === "diet") {
-    document.getElementById("diet-plan").innerHTML = dietPlans[preference];
+    const dietPlans = updatePlan();
+    if (dietPlans) {
+      document.getElementById("diet-plan").innerHTML = dietPlans[preference];
+
+      // ✅ Save the selected calorie goal to localStorage
+      const text = dietPlans[preference];
+      const match = text.match(/(\d+)\s?kcal/);
+      if (match) {
+        localStorage.setItem("calorieGoal", match[1]);
+      }
+    }
   }
+}
+
+
+function resetInputs() {
+  const keys = ["height", "weight", "age", "gender", "activity", "unit-system", "height-unit", "weight-unit", "height-feet", "height-inches"];
+  keys.forEach(id => {
+    localStorage.removeItem(id);
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+
+  // Optional: refresh to clear visual state
+  location.reload();
 }
 
 const workoutPlans = {
@@ -88,3 +146,17 @@ const workoutPlans = {
   Stability:
     '<a href="./Stability%20website/Stability.html">Body weight training, calisthenics, plyometrics, pilates.</a>',
 };
+
+
+// Restore saved inputs on load
+window.addEventListener("DOMContentLoaded", () => {
+  const keys = ["height", "weight", "age", "gender", "activity", "unit-system", "height-unit", "weight-unit", "height-feet", "height-inches"];
+  keys.forEach(id => {
+    const el = document.getElementById(id);
+    const value = localStorage.getItem(id);
+    if (el && value !== null) {
+      el.value = value;
+      el.dispatchEvent(new Event("input")); // trigger any UI logic (like showing ft/in)
+    }
+  });
+});
