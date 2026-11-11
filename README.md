@@ -71,6 +71,15 @@ python3 foods.py && python3 covert.py
 
 ---
 
+### Deploying (Vercel)
+The site is static, so it deploys as-is. `index.html` forwards the site root to the main page (`n2.html`).
+
+1. Go to [vercel.com](https://vercel.com), sign in with GitHub, and choose **Add New → Project**.
+2. Import the `Fitness-Website` repository. Framework preset: **Other**. No build command or output directory is needed.
+3. Click **Deploy**. Vercel redeploys automatically every time `main` is updated.
+
+---
+
 ## Solution Specification
 
 ### Technologies Used:
@@ -107,9 +116,9 @@ python3 foods.py && python3 covert.py
 - Successfully combined aesthetics with functionality for a seamless user experience.
 
 ### Future Improvements:
-1. **User Accounts**: Allow users to log in and track personal fitness goals.
-2. **Advanced Nutrition Tools**: Implement calorie and macronutrient calculators.
-3. **Gamification**: Add badges or rewards for completing exercise routines or meeting health goals.
+1. **User Accounts**: Log in to keep your data across devices (today it lives in one browser's `localStorage`).
+2. **Better serving sizes**: Use each food's real USDA portion weights instead of one shared list (e.g. "1 cup" is currently 240 g for every food).
+3. **More gamification**: Badges for hitting macro goals, building on the daily streak.
 4. **AI Integration**: Use machine learning to provide personalized workout and meal recommendations.
 
 ---
