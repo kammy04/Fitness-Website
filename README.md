@@ -24,6 +24,7 @@ This project bridges that gap by providing a one-stop fitness hub that:
 
 ### 2. Exercise Guides
 - **Aerobic**, **Resistance**, **Flexibility** and **Stability** pages with calories burned per hour, step-by-step form instructions, and recommended reps/sets.
+- Each exercise has a **▶ Watch how-to videos** link that opens a YouTube search for beginner technique in a new tab.
 
 ### 3. Food Search & Macro Tracker (`DIetary website/FoodDB.html`)
 - Search a food database built from the **USDA FoodData Central** API (calories, protein, carbs and fat per 100 g). Results are ranked so names that start with your search come first, with duplicates removed.

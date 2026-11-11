@@ -63,3 +63,18 @@ img {
 .back-link:hover {
   text-decoration: underline;
 }
+
+/* "Watch how-to videos" link under each exercise (opens YouTube search in a new tab) */
+.video-link {
+  display: inline-block;
+  margin: 4px 0 10px;
+  padding: 6px 12px;
+  background: #ffecec;
+  color: #c4302b;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.video-link:hover {
+  background: #ffd9d9;
+}
