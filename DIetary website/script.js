@@ -63,6 +63,7 @@ const cartHistoryList   = document.getElementById('cart-history-list');
 const resetBtn          = document.getElementById('reset-cart');
 const historyList       = document.getElementById('history-list');
 const historyEmpty      = document.getElementById('history-empty');
+const streakEl          = document.getElementById('streak-line');
 
 const customForm        = document.getElementById('custom-food-form');
 const cfName            = document.getElementById('cf-name');
@@ -161,6 +162,45 @@ function refreshLogUI() {
   updateTrackerUI();
   updateCartHistoryUI();
   updateHistoryUI();
+  updateStreakUI();
+}
+
+// ========== Daily streak ==========
+// A day counts if at least one food was logged. If today has nothing yet,
+// the streak is still "alive" from yesterday until midnight.
+function currentStreak() {
+  const d = new Date();
+  d.setHours(12, 0, 0, 0); // noon avoids daylight-saving edge cases
+  const hasLog = () => (dailyLogs[dateKey(d)] || []).length > 0;
+
+  if (!hasLog()) d.setDate(d.getDate() - 1); // today not logged yet
+  let streak = 0;
+  while (hasLog()) {
+    streak++;
+    d.setDate(d.getDate() - 1); // setDate handles month/year boundaries
+  }
+  return streak;
+}
+
+// Different emoji as the streak grows.
+function streakEmoji(n) {
+  if (n >= 30) return '👑';
+  if (n >= 14) return '🏆';
+  if (n >= 7)  return '💪';
+  if (n >= 3)  return '🔥';
+  return '🌱';
+}
+
+function updateStreakUI() {
+  const n = currentStreak();
+  const loggedToday = todayEntries().length > 0;
+  if (n === 0) {
+    streakEl.textContent = '🌱 Log a food today to start a streak!';
+  } else if (!loggedToday) {
+    streakEl.textContent = `${streakEmoji(n)} ${n}-day streak — log something today to keep it going!`;
+  } else {
+    streakEl.textContent = `${streakEmoji(n)} ${n}-day streak!`;
+  }
 }
 
 // ========== Helpers ==========

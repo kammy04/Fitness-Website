@@ -30,6 +30,7 @@ This project bridges that gap by providing a one-stop fitness hub that:
 - Choose an amount in grams (defaults to 100 g) or a serving such as "1 cup"; calculate macros or add the food to today's log.
 - Daily goals for calories, protein, carbs and fat based on your weight, TDEE and dietary goal, with an over/under status line.
 - **Daily log:** each day starts fresh, every entry is timestamped, and past days are kept in a **Past Days** history you can expand.
+- **Daily streak** of consecutive days with something logged, with an emoji that levels up (🌱 → 🔥 3 days → 💪 7 → 🏆 14 → 👑 30).
 - Cart button with an item-count badge; remove single entries or reset today's cart.
 - Add, edit and delete your own **custom foods**.
 
