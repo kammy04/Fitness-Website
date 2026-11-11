@@ -27,6 +27,7 @@ This project bridges that gap by providing a one-stop fitness hub that:
 
 ### 3. Food Search & Macro Tracker (`DIetary website/FoodDB.html`)
 - Search a food database built from the **USDA FoodData Central** API (calories, protein, carbs and fat per 100 g).
+- **Favourites & recent foods:** star a food to pin it, and the last 8 foods you opened appear as one-click chips under the search box.
 - Choose an amount in grams (defaults to 100 g) or a serving such as "1 cup"; calculate macros or add the food to today's log.
 - Daily goals for calories, protein, carbs and fat based on your weight, TDEE and dietary goal, with an over/under status line.
 - **Daily log:** each day starts fresh, every entry is timestamped, and past days are kept in a **Past Days** history you can expand.
@@ -54,6 +55,7 @@ Everything is saved in the browser's `localStorage`, so it stays on your device 
 |---|---|
 | `dailyLogs` | Food entries grouped by date (`"YYYY-MM-DD"`), each with a timestamp |
 | `customFoods` | Foods you added yourself |
+| `favorites`, `recentFoods` | Keys of starred and recently opened foods |
 | `userTDEE`, `userWeightLbs`, `goalMode` | Your saved daily-goal settings |
 
 ### Updating the food database

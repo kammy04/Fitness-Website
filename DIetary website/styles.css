@@ -49,6 +49,47 @@ button:hover {
   transform: scale(1.03);
 }
 
+/* Favourites & recent quick picks */
+#quick-picks[hidden] {
+  display: none;
+}
+.quick-row {
+  margin: 6px 0;
+}
+.quick-label {
+  font-weight: 600;
+  margin-right: 8px;
+}
+.chip {
+  background-color: #eef4ff;
+  color: #0057c2;
+  padding: 4px 12px;
+  margin: 4px 6px 0 0;
+  font-size: 14px;
+  border-radius: 999px;
+  /* long USDA names: cut off with "…" (full name shows on hover) */
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.chip:hover {
+  background-color: #dce8ff;
+}
+.star-btn {
+  background-color: #fff;
+  color: #b26b00;
+  border: 1px solid #ffd591;
+  padding: 6px 14px;
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+.star-btn:hover,
+.star-btn[aria-pressed="true"] {
+  background-color: #fff7e6;
+}
+
 /* Daily streak banner */
 .streak {
   display: inline-block;

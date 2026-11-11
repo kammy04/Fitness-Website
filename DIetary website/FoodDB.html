@@ -29,9 +29,13 @@
   <input type="text" id="search-box" placeholder="Search for a food..." />
   <ul id="search-results"></ul>
 
+  <!-- Favourites & recent foods (filled in by script.js) -->
+  <div id="quick-picks" hidden></div>
+
   <!-- Selected Food Details -->
   <div id="food-details" class="food-card" style="display: none;">
     <h2 id="food-name"></h2>
+    <button id="favorite-btn" type="button" class="star-btn" aria-pressed="false">☆ Add to favourites</button>
     <p id="food-brand"></p>
     <ul id="macro-values"></ul>
 

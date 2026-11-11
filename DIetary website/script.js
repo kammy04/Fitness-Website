@@ -16,6 +16,11 @@ let combinedFoods = (typeof foods !== 'undefined' ? foods : []).concat(customFoo
 let dailyLogs     = JSON.parse(localStorage.getItem('dailyLogs') || '{}');
 migrateOldCart();
 
+// Quick picks under the search box: starred foods, and the last few opened.
+const MAX_RECENT  = 8;
+let favorites     = JSON.parse(localStorage.getItem('favorites')   || '[]'); // food keys
+let recentFoods   = JSON.parse(localStorage.getItem('recentFoods') || '[]'); // food keys, newest first
+
 let userTDEE      = parseFloat(localStorage.getItem('userTDEE'))      || null;
 let userWeightLbs = parseFloat(localStorage.getItem('userWeightLbs')) || null;
 let goalMode      = localStorage.getItem('goalMode') || 'maintenance';
@@ -64,6 +69,8 @@ const resetBtn          = document.getElementById('reset-cart');
 const historyList       = document.getElementById('history-list');
 const historyEmpty      = document.getElementById('history-empty');
 const streakEl          = document.getElementById('streak-line');
+const quickPicks        = document.getElementById('quick-picks');
+const favoriteBtn       = document.getElementById('favorite-btn');
 
 const customForm        = document.getElementById('custom-food-form');
 const cfName            = document.getElementById('cf-name');
@@ -93,6 +100,10 @@ let selectedFood = null;
 prefillGoalForm();
 updateGoalsUI();
 refreshLogUI();
+renderQuickPicks();
+favoriteBtn.addEventListener('click', () => {
+  if (selectedFood) toggleFavorite(selectedFood);
+});
 
 // If the page is left open past midnight, show the new day when the user comes back.
 window.addEventListener('focus', refreshLogUI);
@@ -201,6 +212,77 @@ function updateStreakUI() {
   } else {
     streakEl.textContent = `${streakEmoji(n)} ${n}-day streak!`;
   }
+}
+
+// ========== Favourites & recent foods ==========
+// A stable key per food: custom foods have an id; USDA foods are unique by name.
+function foodKey(food) {
+  return food.source === 'custom' ? food.id : 'usda:' + food.name;
+}
+
+// Look a key back up. Returns undefined if the food no longer exists
+// (e.g. a deleted custom food), so it quietly drops out of the lists.
+// This is a linear scan, O(n) per lookup; fine for a handful of chips.
+function findFood(key) {
+  return combinedFoods.find(f => foodKey(f) === key);
+}
+
+function isFavorite(food) {
+  return favorites.includes(foodKey(food));
+}
+
+function toggleFavorite(food) {
+  const key = foodKey(food);
+  favorites = isFavorite(food) ? favorites.filter(k => k !== key) : [...favorites, key];
+  localStorage.setItem('favorites', JSON.stringify(favorites));
+  updateFavoriteButton();
+  renderQuickPicks();
+}
+
+// Move this food to the front of the recent list (no duplicates, max 8).
+function pushRecent(food) {
+  const key = foodKey(food);
+  recentFoods = [key, ...recentFoods.filter(k => k !== key)].slice(0, MAX_RECENT);
+  localStorage.setItem('recentFoods', JSON.stringify(recentFoods));
+  renderQuickPicks();
+}
+
+function updateFavoriteButton() {
+  if (!selectedFood) return;
+  const fav = isFavorite(selectedFood);
+  favoriteBtn.textContent = fav ? '★ Favourite' : '☆ Add to favourites';
+  favoriteBtn.setAttribute('aria-pressed', String(fav));
+}
+
+function renderQuickPicks() {
+  quickPicks.innerHTML = '';
+  const rows = [
+    ['⭐ Favourites', favorites],
+    ['🕘 Recent', recentFoods]
+  ];
+  let shown = 0;
+  rows.forEach(([title, keys]) => {
+    const foodsInRow = keys.map(findFood).filter(Boolean);
+    if (!foodsInRow.length) return;
+    const row = document.createElement('div');
+    row.className = 'quick-row';
+    const label = document.createElement('span');
+    label.className = 'quick-label';
+    label.textContent = title;
+    row.appendChild(label);
+    foodsInRow.forEach(food => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip';
+      chip.textContent = food.name;
+      chip.title = food.name; // full name on hover when the chip is cut off
+      chip.onclick = () => showDetails(food);
+      row.appendChild(chip);
+    });
+    quickPicks.appendChild(row);
+    shown++;
+  });
+  quickPicks.hidden = shown === 0;
 }
 
 // ========== Helpers ==========
@@ -469,6 +551,9 @@ function showDetails(food) {
   amountInput.value = DEFAULT_GRAMS;
   calcDisplay.innerHTML = '';
   detailsCard.style.display = 'block';
+
+  updateFavoriteButton();
+  pushRecent(food);
 }
 
 // Switching unit resets the amount to a sensible starting value:
@@ -588,6 +673,7 @@ editForm.addEventListener('submit', (e) => {
 
   editSection.style.display = 'none';
   renderSearchResults();
+  renderQuickPicks(); // name may have changed, or the food may be gone
 });
 
 // Delete custom food
@@ -608,6 +694,7 @@ deleteCustomBtn.addEventListener('click', () => {
 
   editSection.style.display = 'none';
   renderSearchResults();
+  renderQuickPicks(); // name may have changed, or the food may be gone
 });
 
 // Cancel edit
