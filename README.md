@@ -1,5 +1,7 @@
 # Fitness Website Project
 
+**🔗 Live site: https://kammy04.github.io/Fitness-Website/**
+
 This project is a comprehensive fitness platform aimed at helping users improve their overall health and wellness. The website provides information on different types of exercises, nutritional tips, and tools to track fitness goals.
 
 ---
@@ -44,7 +46,7 @@ This project bridges that gap by providing a one-stop fitness hub that:
 The site is plain HTML, CSS and JavaScript — no build step. Serve the folder with any static server, for example:
 
 ```bash
-cd gym-workout
+cd Fitness-Website
 python3 -m http.server 8000
 ```
 
@@ -71,27 +73,23 @@ python3 foods.py && python3 covert.py
 
 ---
 
-### Deploying (Vercel)
-The site is static, so it deploys as-is. `index.html` forwards the site root to the main page (`n2.html`).
-
-1. Go to [vercel.com](https://vercel.com), sign in with GitHub, and choose **Add New → Project**.
-2. Import the `Fitness-Website` repository. Framework preset: **Other**. No build command or output directory is needed.
-3. Click **Deploy**. Vercel redeploys automatically every time `main` is updated.
+### Deploying
+The site is hosted on **GitHub Pages** straight from the `main` branch, so every push to `main` updates
+the live site. `index.html` forwards the site root to the main page (`n2.html`).
 
 ---
 
 ## Next Steps
 
-1. **Publish the site** on Vercel (steps under *Deploying* above) so it has a public link.
-2. **Make the food diary easier to find.** Logs are already saved per day in the browser (`localStorage` key `dailyLogs`) and shown in the **Past Days** section of the food page, but nothing points users there. Possible additions: a "History" link at the top, a calendar or weekly view, and charts of calories and macros over time.
-3. **Restructure the layout** so every feature is easy to discover: a navigation bar shared by all pages, a clear order on the food page (search → today → goals → meals → history), and a layout that works on phones.
-4. **Choose a better food data source.** Options to compare:
+1. **Make the food diary easier to find.** Logs are already saved per day in the browser (`localStorage` key `dailyLogs`) and shown in the **Past Days** section of the food page, but nothing points users there. Possible additions: a "History" link at the top, a calendar or weekly view, and charts of calories and macros over time.
+2. **Restructure the layout** so every feature is easy to discover: a navigation bar shared by all pages, a clear order on the food page (search → today → goals → meals → history), and a layout that works on phones.
+3. **Choose a better food data source.** Options to compare:
    - *USDA FoodData Central (current):* free and authoritative, but we only pull the "Survey (FNDDS)" data type, one food at a time. Using the free bulk CSV downloads and adding the **Foundation** and **SR Legacy** data types would give more foods (e.g. plain "oats") and real portion sizes.
    - *Open Food Facts:* free and open, strong on **branded and packaged foods** with barcodes; data quality varies because it's crowd-sourced.
    - *Commercial APIs (e.g. Nutritionix, Edamam):* natural-language search ("2 eggs and toast") and large branded databases, but they need an account, and free tiers are limited.
-5. **Track micronutrients against recommended daily levels.** The USDA data already includes fibre, sodium, sugar, vitamins and minerals; `foods.py` currently keeps only calories, protein, carbs and fat. Compare intake with the Dietary Reference Intakes (RDA/AI), which vary by age and sex.
-6. **Refine the macro targets.** Currently: protein 0.8 g per lb of body weight, fat 25% of calories, carbs fill the remaining calories. To add: let users pick fat within the usual 20–35% of calories, and a **fibre** target of about 14 g per 1,000 kcal.
-7. **User accounts with a real database.** Move data from `localStorage` to a backend (e.g. Firebase, Supabase, or a small server with PostgreSQL) so data follows the user across devices and the "Top 5" idea becomes possible.
+4. **Track micronutrients against recommended daily levels.** The USDA data already includes fibre, sodium, sugar, vitamins and minerals; `foods.py` currently keeps only calories, protein, carbs and fat. Compare intake with the Dietary Reference Intakes (RDA/AI), which vary by age and sex.
+5. **Refine the macro targets.** Currently: protein 0.8 g per lb of body weight, fat 25% of calories, carbs fill the remaining calories. To add: let users pick fat within the usual 20–35% of calories, and a **fibre** target of about 14 g per 1,000 kcal.
+6. **User accounts with a real database.** Move data from `localStorage` to a backend (e.g. Firebase, Supabase, or a small server with PostgreSQL) so data follows the user across devices and the "Top 5" idea becomes possible.
 
 ---
 
@@ -107,7 +105,7 @@ The site is static, so it deploys as-is. `index.html` forwards the site root to 
    - **Food Database**: Categorizes nutritional information for different dietary goals.
    - **Responsive Design**: Ensures compatibility across devices.
 
-3. **Notebook Implementation**:
+2. **Notebook Implementation**:
    - Includes a Jupyter Notebook file for backend or algorithmic operations related to tracking or analyzing fitness data.
 
 ---
@@ -133,8 +131,8 @@ The site is static, so it deploys as-is. `index.html` forwards the site root to 
 ### Future Improvements:
 1. **User Accounts**: Log in to keep your data across devices (today it lives in one browser's `localStorage`).
 2. **Better serving sizes**: Use each food's real USDA portion weights instead of one shared list (e.g. "1 cup" is currently 240 g for every food).
-3. **More gamification**: Badges for hitting macro goals, building on the daily streak.
-4. **AI Integration**: Use machine learning to provide personalized workout and meal recommendations.
+2. **More gamification**: Badges for hitting macro goals, building on the daily streak.
+3. **AI Integration**: Use machine learning to provide personalized workout and meal recommendations.
 
 ---
 
